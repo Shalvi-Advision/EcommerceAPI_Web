@@ -142,7 +142,6 @@ Database/
 postman/
 
 # Upload data and processed files
-upload_patel_data.js
 *.json.backup
 
 # Test results
