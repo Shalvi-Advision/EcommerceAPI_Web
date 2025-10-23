@@ -19,7 +19,18 @@ A comprehensive Node.js backend API for the Patel E-commerce platform with OTP a
    JWT_SECRET=your_jwt_secret
    JWT_EXPIRE=30d
    OTP_EXPIRY_MINUTES=10
+
+   # CORS Configuration (Optional - if not set, allows all origins)
+   # CLIENT_URL=http://localhost:3000
+   # For production, you can set specific allowed origins:
+   # CLIENT_URL=https://yourfrontenddomain.com,https://admin.yourdomain.com
    ```
+
+   **CORS Configuration:**
+   - **Default Behavior**: The API now allows all network IPs and origins by default
+   - **For Production**: You can restrict CORS by setting `CLIENT_URL` environment variable
+   - **All HTTP Methods**: GET, POST, PUT, DELETE, OPTIONS, PATCH are allowed
+   - **Credentials**: Enabled for authentication cookies/tokens
 
 3. **Upload database:**
    ```bash
