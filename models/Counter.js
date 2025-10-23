@@ -16,8 +16,7 @@ const counterSchema = new mongoose.Schema({
   collection: 'counters'
 });
 
-// Indexes for better query performance
-counterSchema.index({ name: 1 }, { unique: true });
+// Note: name field already has unique: true, so index is automatically created
 
 // Static method to get next sequence value
 counterSchema.statics.getNextSequence = async function(counterName) {

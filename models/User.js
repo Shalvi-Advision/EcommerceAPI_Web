@@ -79,7 +79,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-userSchema.index({ mobile: 1 });
+// Note: mobile field already has unique: true, so index is automatically created
 userSchema.index({ otp: 1, otpExpiresAt: 1 });
 userSchema.index({ lastActiveAt: 1 });
 

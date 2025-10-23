@@ -65,7 +65,7 @@ const addressBookSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-addressBookSchema.index({ idaddress_book: 1 });
+// Note: idaddress_book field already has unique: true, so index is automatically created
 addressBookSchema.index({ mobile_number: 1 });
 addressBookSchema.index({ email_id: 1 });
 addressBookSchema.index({ is_default: 1 });

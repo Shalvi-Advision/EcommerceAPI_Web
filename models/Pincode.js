@@ -24,7 +24,7 @@ const pincodeSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 pincodeSchema.index({ pincode: 1 });
-pincodeSchema.index({ idpincode_master: 1 });
+// Note: idpincode_master field already has unique: true, so index is automatically created
 pincodeSchema.index({ is_enabled: 1 });
 
 // Static method to find enabled pincodes

@@ -33,7 +33,7 @@ const deliverySlotSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-deliverySlotSchema.index({ iddelivery_slot: 1 });
+// Note: iddelivery_slot field already has unique: true, so index is automatically created
 deliverySlotSchema.index({ store_code: 1 });
 deliverySlotSchema.index({ is_active: 1 });
 deliverySlotSchema.index({ store_code: 1, is_active: 1 });

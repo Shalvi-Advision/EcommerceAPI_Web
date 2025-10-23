@@ -243,7 +243,7 @@ const productSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-productSchema.index({ productCode: 1 });
+// Note: productCode field already has unique: true, so index is automatically created
 productSchema.index({ name: 'text', description: 'text' }); // Text search
 productSchema.index({ category: 1, subcategory: 1 });
 productSchema.index({ status: 1, isFeatured: 1 });

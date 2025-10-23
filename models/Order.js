@@ -230,7 +230,7 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-orderSchema.index({ order_number: 1 }, { unique: true });
+// Note: order_number field already has unique: true, so index is automatically created
 orderSchema.index({ mobile_no: 1 });
 orderSchema.index({ order_status: 1 });
 orderSchema.index({ store_code: 1 });

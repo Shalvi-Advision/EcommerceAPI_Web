@@ -23,7 +23,7 @@ const paymentModeSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-paymentModeSchema.index({ idpayment_mode: 1 });
+// Note: idpayment_mode field already has unique: true, so index is automatically created
 paymentModeSchema.index({ is_enabled: 1 });
 paymentModeSchema.index({ payment_mode_name: 1 });
 
