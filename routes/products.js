@@ -3,6 +3,84 @@ const router = express.Router();
 const ProductMaster = require('../models/ProductMaster');
 
 /**
+ * @route   POST /api/products/productdetails
+ * @desc    Get a specific product by store_code and p_code
+ * @access  Public
+ * @body    { "store_code": "AVB", "p_code": "2390" }
+ */
+router.post('/productdetails', async (req, res, next) => {
+  try {
+    const { store_code, p_code } = req.body;
+    
+    // Validate required fields
+    if (!store_code || store_code.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'store_code is required'
+      });
+    }
+    
+    if (!p_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'p_code is required'
+      });
+    }
+    
+    // Find the specific product
+    const product = await ProductMaster.findOne({
+      store_code: store_code.trim(),
+      p_code: p_code.toString(),
+      pcode_status: 'Y'
+    });
+    
+    if (!product) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        message: `No product found for store_code: ${store_code.trim()} and p_code: ${p_code}`,
+        store_code: store_code.trim(),
+        p_code: p_code,
+        data: null
+      });
+    }
+    
+    // Format response data
+    const productData = {
+      id: product._id,
+      p_code: product.p_code,
+      barcode: product.barcode,
+      product_name: product.product_name,
+      product_description: product.product_description,
+      package_size: product.package_size,
+      package_unit: product.package_unit,
+      product_mrp: product.product_mrp ? parseFloat(product.product_mrp.toString()) : 0,
+      our_price: product.our_price ? parseFloat(product.our_price.toString()) : 0,
+      brand_name: product.brand_name,
+      store_code: product.store_code,
+      pcode_status: product.pcode_status,
+      dept_id: product.dept_id,
+      category_id: product.category_id,
+      sub_category_id: product.sub_category_id,
+      store_quantity: product.store_quantity,
+      max_quantity_allowed: product.max_quantity_allowed,
+      pcode_img: product.pcode_img
+    };
+    
+    res.status(200).json({
+      success: true,
+      count: 1,
+      message: `Found product for store_code: ${store_code.trim()} and p_code: ${p_code}`,
+      store_code: store_code.trim(),
+      p_code: p_code,
+      data: productData
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   POST /api/products/search-products
  * @desc    Search products by name with partial matching
  * @access  Public
