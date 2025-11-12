@@ -31,7 +31,12 @@ const parseNumber = (value, defaultValue) => {
   return Number.isFinite(numberValue) ? numberValue : defaultValue;
 };
 
-const parseDate = (value) => {
+const parseDate = (value, options = {}) => {
+  const {
+    startOfDay = false,
+    endOfDay = false
+  } = options;
+
   if (!value) {
     return null;
   }
@@ -39,6 +44,12 @@ const parseDate = (value) => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
     return null;
+  }
+
+  if (startOfDay) {
+    date.setHours(0, 0, 0, 0);
+  } else if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
   }
 
   return date;
@@ -213,7 +224,7 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    const parsedStartDate = parseDate(start_date);
+    const parsedStartDate = parseDate(start_date, { startOfDay: true });
     if (!parsedStartDate) {
       return res.status(400).json({
         success: false,
@@ -221,7 +232,7 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    const parsedEndDate = parseDate(end_date);
+    const parsedEndDate = parseDate(end_date, { endOfDay: true });
 
     let normalizedProducts = [];
     try {
@@ -298,7 +309,7 @@ router.get('/', async (req, res, next) => {
 
     const shouldOnlyActive = parseBoolean(active_only, false);
     const activeDate = parseDate(active_on) || new Date();
-    const includeExpired = parseBoolean(include_expired, false);
+    const includeExpired = parseBoolean(include_expired, true);
 
     if (shouldOnlyActive) {
       filters.is_active = true;
@@ -309,10 +320,11 @@ router.get('/', async (req, res, next) => {
         { end_date: { $gte: activeDate } }
       ];
     } else if (!includeExpired) {
+      const now = new Date();
       filters.$or = [
         { end_date: { $exists: false } },
         { end_date: null },
-        { end_date: { $gte: new Date() } }
+        { end_date: { $gte: now } }
       ];
     }
 
@@ -367,7 +379,7 @@ router.get('/active', async (req, res, next) => {
   try {
     const { category, active_on, limit, enrich_products } = req.query;
 
-    const activeDate = parseDate(active_on) || new Date();
+    const activeDate = parseDate(active_on, { endOfDay: true }) || new Date();
 
     const advertisements = await Advertisement.findActive({
       category: category && category.toString().trim() !== '' ? category.toString().trim() : null,
@@ -537,7 +549,7 @@ router.put('/:id', async (req, res, next) => {
     }
 
     if (start_date !== undefined) {
-      const parsedStartDate = parseDate(start_date);
+      const parsedStartDate = parseDate(start_date, { startOfDay: true });
       if (!parsedStartDate) {
         return res.status(400).json({
           success: false,
@@ -548,7 +560,7 @@ router.put('/:id', async (req, res, next) => {
     }
 
     if (end_date !== undefined) {
-      const parsedEndDate = parseDate(end_date);
+      const parsedEndDate = parseDate(end_date, { endOfDay: true });
       updatePayload.end_date = parsedEndDate || undefined;
     }
 
