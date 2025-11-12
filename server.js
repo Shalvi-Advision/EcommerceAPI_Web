@@ -28,6 +28,9 @@ require('./models/Counter');
 require('./models/Favorite');
 require('./models/Cart');
 require('./models/Order');
+require('./models/BestSeller');
+require('./models/PopularCategory');
+require('./models/Advertisement');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -48,6 +51,9 @@ const uploadRoutes = require('./routes/upload');
 const pincodeRoutes = require('./routes/pincodes');
 const storeRoutes = require('./routes/stores');
 const departmentRoutes = require('./routes/departments');
+const bestSellerRoutes = require('./routes/best-sellers');
+const popularCategoryRoutes = require('./routes/popular-categories');
+const advertisementRoutes = require('./routes/advertisements');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -128,6 +134,9 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/pincodes', pincodeRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/best-sellers', bestSellerRoutes);
+app.use('/api/popular-categories', popularCategoryRoutes);
+app.use('/api/advertisements', advertisementRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);
