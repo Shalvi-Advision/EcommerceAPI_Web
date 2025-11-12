@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const Advertisement = require('../models/Advertisement');
+const ProductMaster = require('../models/ProductMaster');
 
 const parseBoolean = (value, defaultValue) => {
   if (typeof value === 'boolean') {
@@ -78,6 +79,99 @@ const normalizeBannerInput = ({ banner_urls, banner_url }) => {
   };
 };
 
+const normalizeProductsInput = (rawProducts) => {
+  let productList = rawProducts;
+
+  if (Array.isArray(productList)) {
+    // ok
+  } else if (productList && typeof productList === 'object') {
+    productList = Object.values(productList);
+  } else {
+    productList = [];
+  }
+
+  return productList.map((product, index) => {
+    if (typeof product === 'string' || typeof product === 'number') {
+      return {
+        p_code: product.toString().trim(),
+        position: index,
+        metadata: {}
+      };
+    }
+
+    if (!product || typeof product !== 'object') {
+      throw new Error(`Invalid product format at index ${index}`);
+    }
+
+    const {
+      p_code,
+      store_code,
+      position,
+      metadata,
+      redirect_url,
+      ...rest
+    } = product;
+
+    if (!p_code || p_code.toString().trim() === '') {
+      throw new Error(`Product at index ${index} is missing p_code`);
+    }
+
+    const normalizedPosition = parseNumber(position, index);
+    const normalizedStoreCode = store_code ? store_code.toString().trim() : undefined;
+
+    let normalizedMetadata = metadata;
+    if (!normalizedMetadata || typeof normalizedMetadata !== 'object') {
+      normalizedMetadata = {};
+    }
+
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value !== undefined) {
+        normalizedMetadata[key] = value;
+      }
+    });
+
+    const normalizedProduct = {
+      p_code: p_code.toString().trim(),
+      position: normalizedPosition,
+      metadata: normalizedMetadata
+    };
+
+    if (normalizedStoreCode) {
+      normalizedProduct.store_code = normalizedStoreCode;
+    }
+
+    if (redirect_url !== undefined && redirect_url !== null) {
+      const trimmedRedirect = redirect_url.toString().trim();
+      if (trimmedRedirect !== '') {
+        normalizedProduct.redirect_url = trimmedRedirect;
+      }
+    }
+
+    return normalizedProduct;
+  });
+};
+
+const mapProductMaster = (product) => ({
+  id: product._id,
+  p_code: product.p_code,
+  barcode: product.barcode,
+  product_name: product.product_name,
+  product_description: product.product_description,
+  package_size: product.package_size,
+  package_unit: product.package_unit,
+  product_mrp: product.product_mrp ? parseFloat(product.product_mrp.toString()) : 0,
+  our_price: product.our_price ? parseFloat(product.our_price.toString()) : 0,
+  brand_name: product.brand_name,
+  store_code: product.store_code,
+  pcode_status: product.pcode_status,
+  dept_id: product.dept_id,
+  category_id: product.category_id,
+  sub_category_id: product.sub_category_id,
+  store_quantity: product.store_quantity,
+  max_quantity_allowed: product.max_quantity_allowed,
+  pcode_img: product.pcode_img
+});
+
 router.post('/', async (req, res, next) => {
   try {
     const {
@@ -91,7 +185,8 @@ router.post('/', async (req, res, next) => {
       start_date,
       end_date,
       sequence,
-      metadata
+      metadata,
+      products
     } = req.body;
 
     if (!title || title.toString().trim() === '') {
@@ -128,6 +223,23 @@ router.post('/', async (req, res, next) => {
 
     const parsedEndDate = parseDate(end_date);
 
+    let normalizedProducts = [];
+    try {
+      normalizedProducts = normalizeProductsInput(products || []);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Invalid products provided'
+      });
+    }
+
+    if (!normalizedProducts.length) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one product must be provided'
+      });
+    }
+
     const advertisement = new Advertisement({
       title: title.toString().trim(),
       description: description && description.toString().trim() !== '' ? description.toString().trim() : undefined,
@@ -139,7 +251,8 @@ router.post('/', async (req, res, next) => {
       start_date: parsedStartDate,
       end_date: parsedEndDate || undefined,
       sequence: parseNumber(sequence, 0),
-      metadata: metadata && typeof metadata === 'object' ? metadata : {}
+      metadata: metadata && typeof metadata === 'object' ? metadata : {},
+      products: normalizedProducts
     });
 
     const savedAdvertisement = await advertisement.save();
@@ -168,7 +281,8 @@ router.get('/', async (req, res, next) => {
       active_only,
       active_on,
       include_expired,
-      limit
+      limit,
+      enrich_products
     } = req.query;
 
     const filters = {};
@@ -210,11 +324,39 @@ router.get('/', async (req, res, next) => {
 
     const advertisements = await query.lean();
 
+    const shouldEnrich = parseBoolean(enrich_products, false);
+
+    let responseData = advertisements;
+
+    if (shouldEnrich && advertisements.length) {
+      const productCodes = Array.from(new Set(
+        advertisements.flatMap(ad => (ad.products || []).map(product => product.p_code))
+      ));
+
+      const productsFromDb = await ProductMaster.find({
+        p_code: { $in: productCodes },
+        pcode_status: 'Y'
+      });
+
+      const productMap = new Map();
+      productsFromDb.forEach((product) => {
+        productMap.set(product.p_code, mapProductMaster(product));
+      });
+
+      responseData = advertisements.map((ad) => ({
+        ...ad,
+        products: (ad.products || []).map((product) => ({
+          ...product,
+          product_details: productMap.get(product.p_code) || null
+        }))
+      }));
+    }
+
     res.status(200).json({
       success: true,
-      count: advertisements.length,
-      message: `Found ${advertisements.length} advertisement(s)`,
-      data: advertisements
+      count: responseData.length,
+      message: `Found ${responseData.length} advertisement(s)`,
+      data: responseData
     });
   } catch (error) {
     next(error);
@@ -223,7 +365,7 @@ router.get('/', async (req, res, next) => {
 
 router.get('/active', async (req, res, next) => {
   try {
-    const { category, active_on, limit } = req.query;
+    const { category, active_on, limit, enrich_products } = req.query;
 
     const activeDate = parseDate(active_on) || new Date();
 
@@ -233,11 +375,38 @@ router.get('/active', async (req, res, next) => {
       limit: limit && Number.isFinite(Number(limit)) ? Number(limit) : null
     }).lean();
 
+    const shouldEnrich = parseBoolean(enrich_products, false);
+    let responseData = advertisements;
+
+    if (shouldEnrich && advertisements.length) {
+      const productCodes = Array.from(new Set(
+        advertisements.flatMap(ad => (ad.products || []).map(product => product.p_code))
+      ));
+
+      const productsFromDb = await ProductMaster.find({
+        p_code: { $in: productCodes },
+        pcode_status: 'Y'
+      });
+
+      const productMap = new Map();
+      productsFromDb.forEach((product) => {
+        productMap.set(product.p_code, mapProductMaster(product));
+      });
+
+      responseData = advertisements.map((ad) => ({
+        ...ad,
+        products: (ad.products || []).map((product) => ({
+          ...product,
+          product_details: productMap.get(product.p_code) || null
+        }))
+      }));
+    }
+
     res.status(200).json({
       success: true,
-      count: advertisements.length,
-      message: `Found ${advertisements.length} active advertisement(s)`,
-      data: advertisements
+      count: responseData.length,
+      message: `Found ${responseData.length} active advertisement(s)`,
+      data: responseData
     });
   } catch (error) {
     next(error);
@@ -247,6 +416,7 @@ router.get('/active', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { enrich_products } = req.query;
 
     const advertisement = await Advertisement.findById(id).lean();
 
@@ -257,10 +427,34 @@ router.get('/:id', async (req, res, next) => {
       });
     }
 
+    let responseData = advertisement;
+
+    if (parseBoolean(enrich_products, false) && advertisement.products && advertisement.products.length) {
+      const productCodes = advertisement.products.map(product => product.p_code);
+
+      const productsFromDb = await ProductMaster.find({
+        p_code: { $in: productCodes },
+        pcode_status: 'Y'
+      });
+
+      const productMap = new Map();
+      productsFromDb.forEach((product) => {
+        productMap.set(product.p_code, mapProductMaster(product));
+      });
+
+      responseData = {
+        ...advertisement,
+        products: advertisement.products.map((product) => ({
+          ...product,
+          product_details: productMap.get(product.p_code) || null
+        }))
+      };
+    }
+
     res.status(200).json({
       success: true,
       message: 'Advertisement fetched successfully',
-      data: advertisement
+      data: responseData
     });
   } catch (error) {
     next(error);
@@ -282,7 +476,8 @@ router.put('/:id', async (req, res, next) => {
       start_date,
       end_date,
       sequence,
-      metadata
+      metadata,
+      products
     } = req.body;
 
     const updatePayload = {};
@@ -363,6 +558,27 @@ router.put('/:id', async (req, res, next) => {
 
     if (metadata !== undefined) {
       updatePayload.metadata = metadata && typeof metadata === 'object' ? metadata : {};
+    }
+
+    if (products !== undefined) {
+      let normalizedProducts;
+      try {
+        normalizedProducts = normalizeProductsInput(products);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: error.message || 'Invalid products provided'
+        });
+      }
+
+      if (!normalizedProducts.length) {
+        return res.status(400).json({
+          success: false,
+          error: 'At least one product must be provided'
+        });
+      }
+
+      updatePayload.products = normalizedProducts;
     }
 
     const updatedAdvertisement = await Advertisement.findByIdAndUpdate(

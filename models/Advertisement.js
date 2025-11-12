@@ -11,6 +11,30 @@ const bannerUrlsSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const advertisementProductSchema = new mongoose.Schema({
+  p_code: {
+    type: String,
+    required: [true, 'Product code is required'],
+    trim: true
+  },
+  store_code: {
+    type: String,
+    trim: true
+  },
+  position: {
+    type: Number,
+    default: 0
+  },
+  redirect_url: {
+    type: String,
+    trim: true
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
+}, { _id: false });
+
 const advertisementSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -57,6 +81,18 @@ const advertisementSchema = new mongoose.Schema({
   metadata: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
+  },
+  products: {
+    type: [advertisementProductSchema],
+    default: [],
+    validate: [
+      {
+        validator: function(products) {
+          return Array.isArray(products) && products.length > 0;
+        },
+        message: 'At least one product is required'
+      }
+    ]
   }
 }, {
   timestamps: true,
