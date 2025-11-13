@@ -3,6 +3,7 @@ const router = express.Router();
 
 const PopularCategory = require('../models/PopularCategory');
 const Subcategory = require('../models/Subcategory');
+const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
   if (typeof value === 'boolean') {
@@ -152,6 +153,7 @@ router.post('/', async (req, res, next) => {
       title,
       description,
       store_code,
+      store_codes,
       sequence,
       is_active,
       subcategories,
@@ -191,16 +193,25 @@ router.post('/', async (req, res, next) => {
       });
     }
 
+    const normalizedStoreCodes = normalizeStoreCodes(store_code, store_codes);
+
     const popularCategoryData = {
       banner_urls: normalizedBannerUrls,
       background_color: background_color.toString().trim(),
       title: title.toString().trim(),
       description: description && description.toString().trim() !== '' ? description.toString().trim() : undefined,
-      store_code: store_code && store_code.toString().trim() !== '' ? store_code.toString().trim() : null,
       subcategories: normalizedSubcategories,
       is_active: parseBoolean(is_active, true),
       sequence: parseNumber(sequence, 0)
     };
+
+    if (normalizedStoreCodes && normalizedStoreCodes.length > 0) {
+      popularCategoryData.store_codes = normalizedStoreCodes;
+      popularCategoryData.store_code = normalizedStoreCodes[0];
+    } else {
+      popularCategoryData.store_code = null;
+      popularCategoryData.store_codes = undefined;
+    }
 
     if (redirect_url !== undefined) {
       if (redirect_url === null) {
@@ -232,13 +243,13 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.get('/', async (req, res, next) => {
+router.post('/list', async (req, res, next) => {
   try {
     const {
       store_code,
       include_inactive,
       enrich_subcategories
-    } = req.query;
+    } = req.body;
 
     const includeInactive = parseBoolean(include_inactive, false);
     const shouldEnrich = parseBoolean(enrich_subcategories, false);
@@ -250,7 +261,11 @@ router.get('/', async (req, res, next) => {
     }
 
     if (store_code && store_code.toString().trim() !== '') {
-      query.store_code = store_code.toString().trim();
+      const trimmedCode = store_code.toString().trim();
+      query.$or = [
+        { store_codes: trimmedCode },
+        { store_code: trimmedCode }
+      ];
     }
 
     const popularCategories = await PopularCategory.find(query).sort({ sequence: 1, createdAt: -1 }).lean();
@@ -360,6 +375,7 @@ router.put('/:id', async (req, res, next) => {
       title,
       description,
       store_code,
+      store_codes,
       sequence,
       is_active,
       subcategories,
@@ -445,10 +461,16 @@ router.put('/:id', async (req, res, next) => {
         : undefined;
     }
 
-    if (store_code !== undefined) {
-      updatePayload.store_code = store_code && store_code.toString().trim() !== ''
-        ? store_code.toString().trim()
-        : null;
+    if (store_code !== undefined || store_codes !== undefined) {
+      const normalizedStoreCodes = normalizeStoreCodes(store_code, store_codes);
+
+      if (normalizedStoreCodes && normalizedStoreCodes.length > 0) {
+        updatePayload.store_codes = normalizedStoreCodes;
+        updatePayload.store_code = normalizedStoreCodes[0];
+      } else {
+        updatePayload.store_code = null;
+        updatePayload.store_codes = undefined;
+      }
     }
 
     if (subcategories !== undefined) {

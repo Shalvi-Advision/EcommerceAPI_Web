@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Advertisement = require('../models/Advertisement');
 const ProductMaster = require('../models/ProductMaster');
+const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
   if (typeof value === 'boolean') {
@@ -192,6 +193,8 @@ router.post('/', async (req, res, next) => {
       banner_urls,
       redirect_url,
       category,
+      store_code,
+      store_codes,
       is_active,
       start_date,
       end_date,
@@ -251,7 +254,9 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    const advertisement = new Advertisement({
+    const normalizedStoreCodes = normalizeStoreCodes(store_code, store_codes);
+
+    const advertisementData = {
       title: title.toString().trim(),
       description: description && description.toString().trim() !== '' ? description.toString().trim() : undefined,
       banner_url: normalizedBannerData.banner_url,
@@ -264,7 +269,17 @@ router.post('/', async (req, res, next) => {
       sequence: parseNumber(sequence, 0),
       metadata: metadata && typeof metadata === 'object' ? metadata : {},
       products: normalizedProducts
-    });
+    };
+
+    if (normalizedStoreCodes && normalizedStoreCodes.length > 0) {
+      advertisementData.store_codes = normalizedStoreCodes;
+      advertisementData.store_code = normalizedStoreCodes[0];
+    } else {
+      advertisementData.store_code = null;
+      advertisementData.store_codes = undefined;
+    }
+
+    const advertisement = new Advertisement(advertisementData);
 
     const savedAdvertisement = await advertisement.save();
 
@@ -284,9 +299,10 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.get('/', async (req, res, next) => {
+router.post('/list', async (req, res, next) => {
   try {
     const {
+      store_code,
       category,
       is_active,
       active_only,
@@ -294,7 +310,11 @@ router.get('/', async (req, res, next) => {
       include_expired,
       limit,
       enrich_products
-    } = req.query;
+    } = req.body;
+
+    const shouldOnlyActive = parseBoolean(active_only, false);
+    const activeDate = parseDate(active_on) || new Date();
+    const includeExpired = parseBoolean(include_expired, true);
 
     const filters = {};
 
@@ -302,30 +322,74 @@ router.get('/', async (req, res, next) => {
       filters.category = category.toString().trim();
     }
 
+    if (store_code && store_code.toString().trim() !== '') {
+      const trimmedCode = store_code.toString().trim();
+      filters.$or = [
+        { store_codes: trimmedCode },
+        { store_code: trimmedCode }
+      ];
+    }
+
     const parsedIsActive = parseBoolean(is_active, null);
     if (parsedIsActive !== null) {
       filters.is_active = parsedIsActive;
     }
 
-    const shouldOnlyActive = parseBoolean(active_only, false);
-    const activeDate = parseDate(active_on) || new Date();
-    const includeExpired = parseBoolean(include_expired, true);
-
     if (shouldOnlyActive) {
       filters.is_active = true;
       filters.start_date = { $lte: activeDate };
-      filters.$or = [
-        { end_date: { $exists: false } },
-        { end_date: null },
-        { end_date: { $gte: activeDate } }
-      ];
+
+      if (!filters.$or) {
+        filters.$or = [];
+      } else {
+        const storeConditions = filters.$or;
+        delete filters.$or;
+        filters.$and = [
+          { $or: storeConditions },
+          {
+            $or: [
+              { end_date: { $exists: false } },
+              { end_date: null },
+              { end_date: { $gte: activeDate } }
+            ]
+          }
+        ];
+      }
+
+      if (!filters.$and) {
+        filters.$or = [
+          { end_date: { $exists: false } },
+          { end_date: null },
+          { end_date: { $gte: activeDate } }
+        ];
+      }
     } else if (!includeExpired) {
       const now = new Date();
-      filters.$or = [
-        { end_date: { $exists: false } },
-        { end_date: null },
-        { end_date: { $gte: now } }
-      ];
+
+      if (!filters.$or) {
+        filters.$or = [];
+      } else {
+        const storeConditions = filters.$or;
+        delete filters.$or;
+        filters.$and = [
+          { $or: storeConditions },
+          {
+            $or: [
+              { end_date: { $exists: false } },
+              { end_date: null },
+              { end_date: { $gte: now } }
+            ]
+          }
+        ];
+      }
+
+      if (!filters.$and) {
+        filters.$or = [
+          { end_date: { $exists: false } },
+          { end_date: null },
+          { end_date: { $gte: now } }
+        ];
+      }
     }
 
     const query = Advertisement.find(filters).sort({ sequence: 1, start_date: -1, createdAt: -1 });
@@ -375,17 +439,53 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/active', async (req, res, next) => {
+router.post('/active', async (req, res, next) => {
   try {
-    const { category, active_on, limit, enrich_products } = req.query;
+    const { store_code, category, active_on, limit, enrich_products } = req.body;
 
     const activeDate = parseDate(active_on, { endOfDay: true }) || new Date();
 
-    const advertisements = await Advertisement.findActive({
-      category: category && category.toString().trim() !== '' ? category.toString().trim() : null,
-      activeOn: activeDate,
-      limit: limit && Number.isFinite(Number(limit)) ? Number(limit) : null
-    }).lean();
+    const filters = {
+      is_active: true,
+      start_date: { $lte: activeDate }
+    };
+
+    if (category && category.toString().trim() !== '') {
+      filters.category = category.toString().trim();
+    }
+
+    if (store_code && store_code.toString().trim() !== '') {
+      const trimmedCode = store_code.toString().trim();
+      filters.$and = [
+        {
+          $or: [
+            { end_date: { $exists: false } },
+            { end_date: null },
+            { end_date: { $gte: activeDate } }
+          ]
+        },
+        {
+          $or: [
+            { store_codes: trimmedCode },
+            { store_code: trimmedCode }
+          ]
+        }
+      ];
+    } else {
+      filters.$or = [
+        { end_date: { $exists: false } },
+        { end_date: null },
+        { end_date: { $gte: activeDate } }
+      ];
+    }
+
+    const query = Advertisement.find(filters).sort({ sequence: 1, start_date: -1 });
+
+    if (limit && Number.isFinite(Number(limit))) {
+      query.limit(Number(limit));
+    }
+
+    const advertisements = await query.lean();
 
     const shouldEnrich = parseBoolean(enrich_products, false);
     let responseData = advertisements;
@@ -484,6 +584,8 @@ router.put('/:id', async (req, res, next) => {
       banner_urls,
       redirect_url,
       category,
+      store_code,
+      store_codes,
       is_active,
       start_date,
       end_date,
@@ -542,6 +644,18 @@ router.put('/:id', async (req, res, next) => {
         });
       }
       updatePayload.category = category.toString().trim();
+    }
+
+    if (store_code !== undefined || store_codes !== undefined) {
+      const normalizedStoreCodes = normalizeStoreCodes(store_code, store_codes);
+
+      if (normalizedStoreCodes && normalizedStoreCodes.length > 0) {
+        updatePayload.store_codes = normalizedStoreCodes;
+        updatePayload.store_code = normalizedStoreCodes[0];
+      } else {
+        updatePayload.store_code = null;
+        updatePayload.store_codes = undefined;
+      }
     }
 
     if (is_active !== undefined) {

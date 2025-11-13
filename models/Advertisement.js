@@ -45,6 +45,21 @@ const advertisementSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  store_code: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  store_codes: {
+    type: [String],
+    default: undefined,
+    validate: {
+      validator: function(codes) {
+        return !codes || (Array.isArray(codes) && codes.length > 0 && codes.every(code => code && code.trim() !== ''));
+      },
+      message: 'store_codes must be a non-empty array of valid store codes'
+    }
+  },
   banner_url: {
     type: String,
     required: [true, 'Banner URL is required'],
@@ -102,6 +117,8 @@ const advertisementSchema = new mongoose.Schema({
 advertisementSchema.index({ category: 1, is_active: 1, start_date: 1 });
 advertisementSchema.index({ is_active: 1, start_date: 1, end_date: 1 });
 advertisementSchema.index({ sequence: 1 });
+advertisementSchema.index({ store_code: 1, is_active: 1 });
+advertisementSchema.index({ store_codes: 1, is_active: 1 });
 
 advertisementSchema.statics.findActive = function({ category = null, activeOn = new Date(), limit = null } = {}) {
   const query = {
@@ -114,6 +131,57 @@ advertisementSchema.statics.findActive = function({ category = null, activeOn = 
     { end_date: null },
     { end_date: { $gte: activeOn } }
   ];
+
+  if (category) {
+    query.category = category;
+  }
+
+  const cursor = this.find(query).sort({ sequence: 1, start_date: -1 });
+
+  if (limit && Number.isFinite(Number(limit))) {
+    cursor.limit(Number(limit));
+  }
+
+  return cursor;
+};
+
+advertisementSchema.statics.findByStoreCodes = function({ storeCodes = null, category = null, activeOnly = false, activeOn = new Date(), limit = null } = {}) {
+  const query = {};
+
+  if (activeOnly) {
+    query.is_active = true;
+    query.start_date = { $lte: activeOn };
+    query.$or = [
+      { end_date: { $exists: false } },
+      { end_date: null },
+      { end_date: { $gte: activeOn } }
+    ];
+  }
+
+  if (storeCodes && Array.isArray(storeCodes) && storeCodes.length > 0) {
+    if (!query.$or) {
+      query.$or = [];
+    } else {
+      const dateConditions = query.$or;
+      delete query.$or;
+      query.$and = [
+        { $or: dateConditions },
+        {
+          $or: [
+            { store_codes: { $in: storeCodes } },
+            { store_code: { $in: storeCodes } }
+          ]
+        }
+      ];
+    }
+
+    if (!query.$and) {
+      query.$or = [
+        { store_codes: { $in: storeCodes } },
+        { store_code: { $in: storeCodes } }
+      ];
+    }
+  }
 
   if (category) {
     query.category = category;

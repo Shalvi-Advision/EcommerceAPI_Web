@@ -30,6 +30,16 @@ const bestSellerSchema = new mongoose.Schema({
     trim: true,
     default: null
   },
+  store_codes: {
+    type: [String],
+    default: undefined,
+    validate: {
+      validator: function(codes) {
+        return !codes || (Array.isArray(codes) && codes.length > 0 && codes.every(code => code && code.trim() !== ''));
+      },
+      message: 'store_codes must be a non-empty array of valid store codes'
+    }
+  },
   banner_urls: {
     desktop: {
       type: String,
@@ -86,6 +96,7 @@ const bestSellerSchema = new mongoose.Schema({
 });
 
 bestSellerSchema.index({ store_code: 1, is_active: 1, sequence: 1 });
+bestSellerSchema.index({ store_codes: 1, is_active: 1, sequence: 1 });
 
 bestSellerSchema.statics.findActiveByStore = function(storeCode) {
   const query = { is_active: true };
@@ -102,6 +113,23 @@ bestSellerSchema.statics.findByStore = function(storeCode) {
 
   if (storeCode) {
     query.store_code = storeCode.trim();
+  }
+
+  return this.find(query).sort({ sequence: 1, createdAt: -1 });
+};
+
+bestSellerSchema.statics.findByStoreCodes = function(storeCodes, activeOnly = false) {
+  const query = {};
+
+  if (activeOnly) {
+    query.is_active = true;
+  }
+
+  if (storeCodes && Array.isArray(storeCodes) && storeCodes.length > 0) {
+    query.$or = [
+      { store_codes: { $in: storeCodes } },
+      { store_code: { $in: storeCodes } }
+    ];
   }
 
   return this.find(query).sort({ sequence: 1, createdAt: -1 });

@@ -9,15 +9,23 @@ Use the base URL configured for your environment (e.g. `https://api.example.com`
 ## 1. Best Seller Sections
 
 ### List Sections
-- **Method:** `GET`
-- **URL:** `/api/best-sellers`
-- **Recommended Query Params:**
-  - `store_code`: Store identifier to scope curated sections.
-  - `enrich_products=true`: Returns embedded product snapshots for rendering.
+- **Method:** `POST`
+- **URL:** `/api/best-sellers/list`
+- **Request Body:**
+  - `store_code`: (optional) Single store identifier to filter sections for a specific store.
+  - `include_inactive`: (optional, default: `false`) Include inactive sections.
+  - `enrich_products`: (optional, default: `false`) Returns embedded product snapshots for rendering.
 - **Example Request:**
+  ```bash
+  POST https://api.example.com/api/best-sellers/list
+  Content-Type: application/json
+
+  {
+    "store_code": "AVB",
+    "enrich_products": true
+  }
   ```
-  GET https://api.example.com/api/best-sellers?store_code=AVB&enrich_products=true
-  ```
+- **Note:** This endpoint returns sections matching the provided store code. Sections can be associated with multiple stores, and will be returned if any of their store codes match.
 - **Sample Response:**
   ```json
   {
@@ -68,13 +76,23 @@ Use the base URL configured for your environment (e.g. `https://api.example.com`
 ## 2. Popular Categories
 
 ### List Sections
-- **Method:** `GET`
-- **URL:** `/api/popular-categories`
-- **Recommended Query Params:** `store_code`, `enrich_subcategories=true`
-- **Example:**
+- **Method:** `POST`
+- **URL:** `/api/popular-categories/list`
+- **Request Body:**
+  - `store_code`: (optional) Single store identifier to filter sections for a specific store.
+  - `include_inactive`: (optional, default: `false`) Include inactive sections.
+  - `enrich_subcategories`: (optional, default: `false`) Returns embedded subcategory details.
+- **Example Request:**
+  ```bash
+  POST https://api.example.com/api/popular-categories/list
+  Content-Type: application/json
+
+  {
+    "store_code": "AVB",
+    "enrich_subcategories": true
+  }
   ```
-  GET https://api.example.com/api/popular-categories?store_code=AVB&enrich_subcategories=true
-  ```
+- **Note:** This endpoint returns sections matching the provided store code. Sections can be associated with multiple stores.
 - **Sample Response:**
   ```json
   {
@@ -119,25 +137,50 @@ Use the base URL configured for your environment (e.g. `https://api.example.com`
 
 Use advertisements to show banner creatives with deep links and associated product highlights.
 
-### Option A: Fetch All (including future/expired)
-- **Method:** `GET`
-- **URL:** `/api/advertisements`
-- **Typical Query Params:**
-  - `category`: Optional; e.g. `homepage`, `offers`.
-  - `include_expired=false`: Filter out ads whose `end_date` has passed.
-  - `enrich_products=true`: Embed product snapshots.
-- **Example:**
-  ```
-  GET https://api.example.com/api/advertisements?category=homepage&include_expired=false&enrich_products=true
+### List Advertisements
+- **Method:** `POST`
+- **URL:** `/api/advertisements/list`
+- **Request Body:**
+  - `store_code`: (optional) Single store identifier to filter advertisements for a specific store.
+  - `category`: (optional) Filter by category (e.g., `homepage`, `offers`).
+  - `active_only`: (optional, default: `false`) Return only active advertisements.
+  - `active_on`: (optional) ISO date to check advertisement active status.
+  - `include_expired`: (optional, default: `true`) Include expired advertisements.
+  - `limit`: (optional) Maximum number of results to return.
+  - `enrich_products`: (optional, default: `false`) Embed product snapshots.
+- **Example Request:**
+  ```bash
+  POST https://api.example.com/api/advertisements/list
+  Content-Type: application/json
+
+  {
+    "store_code": "AVB",
+    "category": "homepage",
+    "active_only": true,
+    "enrich_products": true,
+    "limit": 10
+  }
   ```
 
-### Option B: Fetch Only Currently Active Ads
-- **Method:** `GET`
+### Fetch Only Active Advertisements
+- **Method:** `POST`
 - **URL:** `/api/advertisements/active`
-- **Query Params:** `category`, `active_on` (ISO date, optional), `limit`, `enrich_products=true`
-- **Example:**
-  ```
-  GET https://api.example.com/api/advertisements/active?category=homepage&enrich_products=true
+- **Request Body:**
+  - `store_code`: (optional) Single store identifier to filter advertisements.
+  - `category`: (optional) Filter by category.
+  - `active_on`: (optional) ISO date to check active status (defaults to current date).
+  - `limit`: (optional) Maximum number of results.
+  - `enrich_products`: (optional, default: `false`) Embed product snapshots.
+- **Example Request:**
+  ```bash
+  POST https://api.example.com/api/advertisements/active
+  Content-Type: application/json
+
+  {
+    "store_code": "AVB",
+    "category": "homepage",
+    "enrich_products": true
+  }
   ```
 
 ### Sample Response (Active Ads)
@@ -198,10 +241,19 @@ Use advertisements to show banner creatives with deep links and associated produ
 ---
 
 ## Summary
-- **Best Sellers**: `GET /api/best-sellers`, optional `:id`.
-- **Popular Categories**: `GET /api/popular-categories`, optional `:id`.
-- **Advertisements**: `GET /api/advertisements` or `GET /api/advertisements/active`, optional `:id`.
-- Always include `enrich_products=true` or `enrich_subcategories=true` when you need product/category metadata in a single payload.
 
-This setup provides all data required to power the home page merchandising, category highlights, and promotional banners in the React customer app.
+### Available Endpoints
+- **Best Sellers**: `POST /api/best-sellers/list` with optional `store_code`
+- **Popular Categories**: `POST /api/popular-categories/list` with optional `store_code`
+- **Advertisements**: `POST /api/advertisements/list` or `POST /api/advertisements/active` with optional `store_code`
+- **Individual Items**: `GET /api/best-sellers/:id`, `GET /api/popular-categories/:id`, `GET /api/advertisements/:id`
+
+### Key Features
+- **Store Filtering**: All POST endpoints accept an optional single `store_code` to filter content for a specific store
+- **Multi-Store Support**: Sections can be associated with multiple store codes in the backend. When you provide a `store_code`, any section where that code matches will be returned
+- **Enrichment**: Include `enrich_products=true` or `enrich_subcategories=true` when you need product/category metadata in a single payload
+- **Flexible Filtering**: Filter by store code, category, active status, and date ranges
+- **POST Only**: All list endpoints use POST method to accept filtering parameters in the request body
+
+This setup provides all data required to power the home page merchandising, category highlights, and promotional banners in the React customer app with store-specific filtering support.
 
