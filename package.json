@@ -9,7 +9,9 @@
     "upload": "node upload_patel_data.js",
     "clear-db": "node scripts/clear_database.js",
     "test": "node test_api.js",
-    "test:api": "jest"
+    "test:api": "jest",
+    "create-admin": "node create-admin.js",
+    "update-postman": "node update-postman.js"
   },
   "keywords": [
     "ecommerce",

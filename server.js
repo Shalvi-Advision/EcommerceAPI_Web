@@ -54,6 +54,7 @@ const departmentRoutes = require('./routes/departments');
 const bestSellerRoutes = require('./routes/best-sellers');
 const popularCategoryRoutes = require('./routes/popular-categories');
 const advertisementRoutes = require('./routes/advertisements');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -137,6 +138,7 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/best-sellers', bestSellerRoutes);
 app.use('/api/popular-categories', popularCategoryRoutes);
 app.use('/api/advertisements', advertisementRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);

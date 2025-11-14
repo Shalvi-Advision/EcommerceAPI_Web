@@ -1,0 +1,768 @@
+{
+  "info": {
+    "_postman_id": "admin-api-collection-2024",
+    "name": "Patel E-Commerce - Admin APIs",
+    "description": "Complete collection of Admin Panel APIs for Patel E-Commerce platform. Includes User Management, Product Management, Order Management, Analytics Dashboard, and Category/Department Management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5001/api",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users?page=1&limit=20&search=&role=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "role", "value": ""},
+                {"key": "sortBy", "value": "createdAt"},
+                {"key": "sortOrder", "value": "desc"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\",\n  \"role\": \"user\",\n  \"isVerified\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/:id/role",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", ":id", "role"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Get User Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/stats/overview",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "stats", "overview"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Management",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/products?page=1&limit=20&search=&category=&status=&stockStatus=",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "category", "value": ""},
+                {"key": "status", "value": ""},
+                {"key": "stockStatus", "value": ""}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"P001\",\n  \"name\": \"Sample Product\",\n  \"description\": \"Product description\",\n  \"category\": \"category_id_here\",\n  \"price\": {\n    \"mrp\": 100,\n    \"sellingPrice\": 80,\n    \"discount\": 20\n  },\n  \"stock\": {\n    \"quantity\": 50,\n    \"minStockLevel\": 5\n  },\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated description\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Product Stock",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 100,\n  \"operation\": \"set\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id/stock",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id", "stock"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Product Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id", "status"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Product Price",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mrp\": 150,\n  \"sellingPrice\": 120,\n  \"discount\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products/:id/price",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", ":id", "price"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Get Product Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/products/stats/overview",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", "stats", "overview"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Update Product Status",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productIds\": [\"id1\", \"id2\", \"id3\"],\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/products/bulk-update-status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "products", "bulk-update-status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order Management",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders?page=1&limit=20&search=&status=&paymentStatus=",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "status", "value": ""},
+                {"key": "paymentStatus", "value": ""}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/orders/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", ":id", "status"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Payment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentStatus\": \"completed\",\n  \"transactionId\": \"TXN123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/orders/:id/payment-status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", ":id", "payment-status"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Update Order",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_notes\": \"Updated notes\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/orders/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete Order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Get Order Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/stats/overview",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", "stats", "overview"]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/stats/revenue?groupBy=day",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", "stats", "revenue"],
+              "query": [{"key": "groupBy", "value": "day"}]
+            }
+          }
+        },
+        {
+          "name": "Bulk Update Order Status",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderIds\": [\"id1\", \"id2\", \"id3\"],\n  \"status\": \"confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/orders/bulk-update-status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", "bulk-update-status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics Dashboard",
+      "item": [
+        {
+          "name": "Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/overview",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "overview"]
+            }
+          }
+        },
+        {
+          "name": "Sales Trend",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/sales-trend?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "sales-trend"],
+              "query": [{"key": "days", "value": "30"}]
+            }
+          }
+        },
+        {
+          "name": "Top Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/top-products?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "top-products"],
+              "query": [{"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Top Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/top-categories?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "top-categories"],
+              "query": [{"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Recent Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/recent-orders?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "recent-orders"],
+              "query": [{"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Order Status Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/order-status-distribution",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "order-status-distribution"]
+            }
+          }
+        },
+        {
+          "name": "Payment Status Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/payment-status-distribution",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "payment-status-distribution"]
+            }
+          }
+        },
+        {
+          "name": "User Activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/user-activity",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "user-activity"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Category Management",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories?page=1&limit=20&search=&storeCode=",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "search", "value": ""},
+                {"key": "storeCode", "value": ""}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idcategory_master\": \"CAT001\",\n  \"category_name\": \"New Category\",\n  \"dept_id\": \"DEPT001\",\n  \"sequence_id\": 1,\n  \"store_code\": \"STORE001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Updated Category Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Department Management",
+      "item": [
+        {
+          "name": "Get All Departments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/departments/all?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "departments", "all"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Department by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/departments/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "departments", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department_id\": \"DEPT001\",\n  \"department_name\": \"New Department\",\n  \"dept_type_id\": \"TYPE001\",\n  \"sequence_id\": 1,\n  \"store_code\": \"STORE001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories/departments",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "departments"]
+            }
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department_name\": \"Updated Department\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories/departments/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "departments", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/departments/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "departments", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subcategory Management",
+      "item": [
+        {
+          "name": "Get All Subcategories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/subcategories/all?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "subcategories", "all"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Subcategory",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subcategory_name\": \"New Subcategory\",\n  \"category_id\": \"category_id_here\",\n  \"sequence_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories/subcategories",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "subcategories"]
+            }
+          }
+        },
+        {
+          "name": "Update Subcategory",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subcategory_name\": \"Updated Subcategory\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/categories/subcategories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "subcategories", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Delete Subcategory",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/categories/subcategories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "categories", "subcategories", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
