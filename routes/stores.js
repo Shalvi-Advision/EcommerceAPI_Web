@@ -4,9 +4,10 @@ const Store = require('../models/Store');
 
 /**
  * @route   POST /api/stores/by-pincode
- * @desc    Get all stores by pincode
+ * @desc    Get all stores by pincode (includes both enabled and disabled stores)
  * @access  Public
  * @body    { "pincode": "421002" }
+ * @response Returns stores with is_enabled field indicating status ("Enabled" or "Disabled")
  */
 router.post('/by-pincode', async (req, res, next) => {
   try {
@@ -28,8 +29,8 @@ router.post('/by-pincode', async (req, res, next) => {
       });
     }
     
-    // Find stores by pincode (only enabled stores)
-    const stores = await Store.findByPincode(pincode);
+    // Find stores by pincode (include both enabled and disabled stores)
+    const stores = await Store.findByPincode(pincode, true); // true = includeDisabled
     
     if (!stores || stores.length === 0) {
       return res.status(200).json({
