@@ -62,16 +62,67 @@ const PORT = process.env.PORT || 5001;
 // Security middleware
 app.use(helmet());
 
-// CORS configuration - Allow all origins for public API access
-app.use(cors({
-  origin: function (origin, callback) {
+const parseAllowedOrigins = () => {
+  if (!process.env.CLIENT_URL) {
+    return [];
+  }
+
+  return process.env.CLIENT_URL
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
+
+const allowedOrigins = parseAllowedOrigins();
+const allowAllOrigins = allowedOrigins.length === 0 || allowedOrigins.includes('*');
+
+const corsOptionsDelegate = (req, callback) => {
+  const requestOrigin = req.header('Origin');
+
+  if (!requestOrigin) {
     // Allow requests with no origin (like mobile apps, curl requests, Postman)
-    // Allow all origins for maximum accessibility
-    callback(null, true);
-  },
+    return callback(null, {
+      origin: true
+    });
+  }
+
+  if (allowAllOrigins || allowedOrigins.includes(requestOrigin)) {
+    return callback(null, {
+      origin: requestOrigin
+    });
+  }
+
+  console.warn(`🛑 CORS blocked origin: ${requestOrigin}`);
+  return callback(null, {
+    origin: false
+  });
+};
+
+const corsOptions = {
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control']
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control'],
+  exposedHeaders: ['Content-Length', 'Date', 'X-Request-Id'],
+  optionsSuccessStatus: 204,
+  maxAge: 86400
+};
+
+app.use(cors((req, callback) => {
+  corsOptionsDelegate(req, (error, options) => {
+    if (error) {
+      return callback(error, options);
+    }
+    callback(null, { ...corsOptions, ...options });
+  });
+}));
+app.options('*', cors((req, callback) => {
+  corsOptionsDelegate(req, (error, options) => {
+    if (error) {
+      return callback(error, options);
+    }
+    callback(null, { ...corsOptions, ...options });
+  });
 }));
 
 // Rate limiting - stricter for auth routes
