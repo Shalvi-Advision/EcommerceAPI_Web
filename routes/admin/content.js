@@ -28,6 +28,93 @@ const validateObjectId = (id) => {
   return sanitized;
 };
 
+// Helper function to find document by ID (handles string _id in database)
+const findDocumentById = async (Model, id, modelName) => {
+  // Try multiple query methods since _id might be stored as string
+  let doc = await Model.findById(id);
+  if (!doc) {
+    doc = await Model.findOne({ _id: id });
+  }
+  if (!doc) {
+    // Ultimate fallback: find all and match by string
+    const allDocs = await Model.find({}).lean();
+    const matchingDoc = allDocs.find(d => d._id && d._id.toString() === id);
+    if (matchingDoc) {
+      const docIdString = matchingDoc._id.toString();
+      doc = await Model.findOne({ _id: docIdString });
+    }
+  }
+  return doc;
+};
+
+// Helper function to update document by ID (handles string _id in database)
+const updateDocumentById = async (Model, id, updateData, modelName) => {
+  // Try to find the document first
+  let existingDoc = await findDocumentById(Model, id, modelName);
+  
+  if (!existingDoc) {
+    return null;
+  }
+  
+  // Get the actual _id from the found document (might be string)
+  const updateId = existingDoc._id.toString();
+  
+  // Try multiple update methods
+  let updatedDoc = await Model.findOneAndUpdate(
+    { _id: updateId },
+    updateData,
+    { new: true, runValidators: true }
+  );
+  
+  if (!updatedDoc) {
+    // Try without validators
+    updatedDoc = await Model.findOneAndUpdate(
+      { _id: updateId },
+      updateData,
+      { new: true, runValidators: false }
+    );
+  }
+  
+  if (!updatedDoc) {
+    // Final fallback: use updateOne
+    const updateResult = await Model.updateOne(
+      { _id: updateId },
+      { $set: updateData }
+    );
+    if (updateResult.matchedCount > 0) {
+      updatedDoc = await Model.findOne({ _id: updateId });
+    }
+  }
+  
+  return updatedDoc;
+};
+
+// Helper function to delete document by ID (handles string _id in database)
+const deleteDocumentById = async (Model, id, modelName) => {
+  // Try to find the document first
+  let existingDoc = await findDocumentById(Model, id, modelName);
+  
+  if (!existingDoc) {
+    return null;
+  }
+  
+  // Get the actual _id from the found document (might be string)
+  const deleteId = existingDoc._id.toString();
+  
+  // Try multiple delete methods
+  let deletedDoc = await Model.findOneAndDelete({ _id: deleteId });
+  
+  if (!deletedDoc) {
+    // Fallback: use deleteOne
+    const deleteResult = await Model.deleteOne({ _id: deleteId });
+    if (deleteResult.deletedCount > 0) {
+      deletedDoc = existingDoc; // Return the found doc as confirmation
+    }
+  }
+  
+  return deletedDoc;
+};
+
 const formatBannerDocument = (doc) => {
   if (!doc) {
     return doc;
@@ -858,6 +945,42 @@ router.post('/payment-modes', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/content/payment-modes/:id
+// @desc    Get payment mode by ID
+// @access  Admin
+router.get('/payment-modes/:id', async (req, res) => {
+  try {
+    const id = validateObjectId(req.params.id);
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment mode ID format'
+      });
+    }
+
+    const paymentMode = await findDocumentById(PaymentMode, id, 'PaymentMode');
+
+    if (!paymentMode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment mode not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: paymentMode
+    });
+  } catch (error) {
+    console.error('Get payment mode error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment mode',
+      error: error.message
+    });
+  }
+});
+
 // @route   PUT /api/admin/content/payment-modes/:id
 // @desc    Update payment mode
 // @access  Admin
@@ -871,11 +994,7 @@ router.put('/payment-modes/:id', async (req, res) => {
       });
     }
 
-    const paymentMode = await PaymentMode.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const paymentMode = await updateDocumentById(PaymentMode, id, req.body, 'PaymentMode');
 
     if (!paymentMode) {
       return res.status(404).json({
@@ -912,7 +1031,7 @@ router.delete('/payment-modes/:id', async (req, res) => {
       });
     }
 
-    const paymentMode = await PaymentMode.findByIdAndDelete(id);
+    const paymentMode = await deleteDocumentById(PaymentMode, id, 'PaymentMode');
 
     if (!paymentMode) {
       return res.status(404).json({
@@ -1013,6 +1132,42 @@ router.post('/pincodes', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/content/pincodes/:id
+// @desc    Get pincode by ID
+// @access  Admin
+router.get('/pincodes/:id', async (req, res) => {
+  try {
+    const id = validateObjectId(req.params.id);
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pincode ID format'
+      });
+    }
+
+    const pincode = await findDocumentById(Pincode, id, 'Pincode');
+
+    if (!pincode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pincode not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: pincode
+    });
+  } catch (error) {
+    console.error('Get pincode error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pincode',
+      error: error.message
+    });
+  }
+});
+
 // @route   PUT /api/admin/content/pincodes/:id
 // @desc    Update pincode
 // @access  Admin
@@ -1026,11 +1181,7 @@ router.put('/pincodes/:id', async (req, res) => {
       });
     }
 
-    const pincode = await Pincode.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const pincode = await updateDocumentById(Pincode, id, req.body, 'Pincode');
 
     if (!pincode) {
       return res.status(404).json({
@@ -1067,7 +1218,7 @@ router.delete('/pincodes/:id', async (req, res) => {
       });
     }
 
-    const pincode = await Pincode.findByIdAndDelete(id);
+    const pincode = await deleteDocumentById(Pincode, id, 'Pincode');
 
     if (!pincode) {
       return res.status(404).json({
@@ -1676,6 +1827,42 @@ router.post('/delivery-slots', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/content/delivery-slots/:id
+// @desc    Get delivery slot by ID
+// @access  Admin
+router.get('/delivery-slots/:id', async (req, res) => {
+  try {
+    const id = validateObjectId(req.params.id);
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid delivery slot ID format'
+      });
+    }
+
+    const deliverySlot = await findDocumentById(DeliverySlot, id, 'DeliverySlot');
+
+    if (!deliverySlot) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery slot not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: deliverySlot
+    });
+  } catch (error) {
+    console.error('Get delivery slot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching delivery slot',
+      error: error.message
+    });
+  }
+});
+
 // @route   PUT /api/admin/content/delivery-slots/:id
 // @desc    Update delivery slot
 // @access  Admin
@@ -1689,11 +1876,7 @@ router.put('/delivery-slots/:id', async (req, res) => {
       });
     }
 
-    const deliverySlot = await DeliverySlot.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const deliverySlot = await updateDocumentById(DeliverySlot, id, req.body, 'DeliverySlot');
 
     if (!deliverySlot) {
       return res.status(404).json({
@@ -1730,7 +1913,7 @@ router.delete('/delivery-slots/:id', async (req, res) => {
       });
     }
 
-    const deliverySlot = await DeliverySlot.findByIdAndDelete(id);
+    const deliverySlot = await deleteDocumentById(DeliverySlot, id, 'DeliverySlot');
 
     if (!deliverySlot) {
       return res.status(404).json({
@@ -1820,7 +2003,7 @@ router.get('/banners/:id', async (req, res) => {
       });
     }
 
-    const banner = await Banner.findById(id);
+    const banner = await findDocumentById(Banner, id, 'Banner');
 
     if (!banner) {
       return res.status(404).json({
@@ -1880,11 +2063,7 @@ router.put('/banners/:id', async (req, res) => {
     }
 
     const payload = normalizeBannerPayload(req.body, { isUpdate: true });
-    const banner = await Banner.findByIdAndUpdate(
-      id,
-      payload,
-      { new: true, runValidators: true }
-    );
+    const banner = await updateDocumentById(Banner, id, payload, 'Banner');
 
     if (!banner) {
       return res.status(404).json({
@@ -1921,7 +2100,7 @@ router.delete('/banners/:id', async (req, res) => {
       });
     }
 
-    const banner = await Banner.findByIdAndDelete(id);
+    const banner = await deleteDocumentById(Banner, id, 'Banner');
 
     if (!banner) {
       return res.status(404).json({

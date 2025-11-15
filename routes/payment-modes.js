@@ -4,9 +4,10 @@ const PaymentMode = require('../models/PaymentMode');
 
 /**
  * @route   POST /api/payment-modes/get-payment-modes
- * @desc    Get payment modes by store_code and project_code
+ * @desc    Get payment modes by store_code and project_code (includes both enabled and disabled)
  * @access  Public
  * @body    { "store_code": "AVB", "project_code": "PROJ001" }
+ * @response Returns payment modes with is_enabled field indicating status ("Yes" or "No")
  */
 router.post('/get-payment-modes', async (req, res, next) => {
   try {
@@ -64,8 +65,9 @@ router.post('/get-payment-modes', async (req, res, next) => {
 
 /**
  * @route   GET /api/payment-modes
- * @desc    Get all payment modes
+ * @desc    Get all payment modes (includes both enabled and disabled)
  * @access  Public
+ * @response Returns payment modes with is_enabled field indicating status ("Yes" or "No")
  */
 router.get('/', async (req, res, next) => {
   try {

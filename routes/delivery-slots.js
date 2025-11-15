@@ -4,9 +4,10 @@ const DeliverySlot = require('../models/DeliverySlot');
 
 /**
  * @route   POST /api/delivery-slots/get-delivery-slots
- * @desc    Get delivery slots by store_code and project_code
+ * @desc    Get delivery slots by store_code and project_code (includes both active and inactive)
  * @access  Public
  * @body    { "store_code": "KALYANEAST", "project_code": "PROJ001" }
+ * @response Returns delivery slots with is_active field indicating status ("yes" or "no")
  */
 router.post('/get-delivery-slots', async (req, res, next) => {
   try {
@@ -66,8 +67,9 @@ router.post('/get-delivery-slots', async (req, res, next) => {
 
 /**
  * @route   GET /api/delivery-slots
- * @desc    Get all delivery slots
+ * @desc    Get all delivery slots (includes both active and inactive)
  * @access  Public
+ * @response Returns delivery slots with is_active field indicating status ("yes" or "no")
  */
 router.get('/', async (req, res, next) => {
   try {

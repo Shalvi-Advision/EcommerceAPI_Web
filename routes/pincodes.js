@@ -82,9 +82,10 @@ router.get('/enabled/list', async (req, res, next) => {
 
 /**
  * @route   POST /api/pincodes/check-availability
- * @desc    Check if a pincode is available/serviceable (POST method)
+ * @desc    Check if a pincode is available/serviceable (includes both enabled and disabled)
  * @access  Public
  * @body    { "pincode": "421002" }
+ * @response Returns pincode data with is_enabled field and serviceable flag indicating if enabled
  */
 router.post('/check-availability', async (req, res, next) => {
   try {
@@ -106,8 +107,8 @@ router.post('/check-availability', async (req, res, next) => {
       });
     }
     
-    // Check if pincode exists and is enabled
-    const pincodeData = await Pincode.isServiceable(pincode);
+    // Check if pincode exists (include both enabled and disabled)
+    const pincodeData = await Pincode.findOne({ pincode: pincode });
     
     if (!pincodeData) {
       return res.status(200).json({
@@ -119,11 +120,16 @@ router.post('/check-availability', async (req, res, next) => {
       });
     }
     
+    // Return pincode data with status (enabled or disabled)
+    const isServiceable = pincodeData.is_enabled === 'Enabled';
+    
     res.status(200).json({
       success: true,
       available: true,
-      serviceable: true,
-      message: 'Great! We deliver to this pincode',
+      serviceable: isServiceable,
+      message: isServiceable 
+        ? 'Great! We deliver to this pincode' 
+        : 'This pincode exists but is currently disabled',
       pincode: pincode,
       data: {
         id: pincodeData._id,
