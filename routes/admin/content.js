@@ -10,6 +10,140 @@ const Store = require('../../models/Store');
 const DeliverySlot = require('../../models/DeliverySlot');
 const Banner = require('../../models/Banner');
 
+const formatBannerDocument = (doc) => {
+  if (!doc) {
+    return doc;
+  }
+
+  const banner = doc.toObject ? doc.toObject() : { ...doc };
+
+  const assets = Array.isArray(banner.banner_assets)
+    ? banner.banner_assets.map((asset, index) => {
+      const key = asset && asset.key && asset.key.toString().trim() !== ''
+        ? asset.key.toString().trim()
+        : `bannerUrl${index + 1}`;
+
+      return {
+        key,
+        desktop: asset && asset.desktop ? asset.desktop : null,
+        mobile: asset && asset.mobile ? asset.mobile : null
+      };
+    })
+    : [];
+
+  const bannerUrls = assets.reduce((acc, asset) => {
+    acc[asset.key] = {
+      desktop: asset.desktop,
+      mobile: asset.mobile
+    };
+    return acc;
+  }, {});
+
+  const primaryAsset = assets.find(item => item.desktop || item.mobile) || {};
+
+  return {
+    ...banner,
+    banner_assets: assets,
+    banner_urls: bannerUrls,
+    image_url: banner.image_url || primaryAsset.desktop || primaryAsset.mobile || null
+  };
+};
+
+const normalizeBannerPayload = (input, { isUpdate = false } = {}) => {
+  const payload = { ...input };
+  const assets = [];
+
+  const registerAsset = (desktop, mobile, key, fallbackIndex) => {
+    const desktopUrl = typeof desktop === 'string' ? desktop.trim() : desktop;
+    const mobileUrl = typeof mobile === 'string' ? mobile.trim() : mobile;
+
+    if ((desktopUrl && desktopUrl !== '') || (mobileUrl && mobileUrl !== '')) {
+      const resolvedKey = key && key.toString().trim() !== ''
+        ? key.toString().trim()
+        : `bannerUrl${fallbackIndex + 1 || assets.length + 1}`;
+
+      assets.push({
+        key: resolvedKey,
+        desktop: desktopUrl && desktopUrl !== '' ? desktopUrl : undefined,
+        mobile: mobileUrl && mobileUrl !== '' ? mobileUrl : undefined
+      });
+    }
+  };
+
+  if (Array.isArray(input.banner_assets)) {
+    input.banner_assets.forEach((asset, index) => {
+      if (!asset) {
+        return;
+      }
+      registerAsset(asset.desktop, asset.mobile, asset.key, index);
+    });
+  }
+
+  if (input.banner_urls && typeof input.banner_urls === 'object' && !Array.isArray(input.banner_urls)) {
+    Object.entries(input.banner_urls).forEach(([key, value]) => {
+      if (!value || typeof value !== 'object') {
+        return;
+      }
+      registerAsset(value.desktop, value.mobile, key);
+    });
+  }
+
+  for (let i = 1; i <= 10; i += 1) {
+    const camelDesktop = input[`bannerUrl${i}Desktop`];
+    const camelMobile = input[`bannerUrl${i}Mobile`];
+    const snakeDesktop = input[`bannerUrl${i}_desktop`];
+    const snakeMobile = input[`bannerUrl${i}_mobile`];
+
+    const desktop = camelDesktop || snakeDesktop;
+    const mobile = camelMobile || snakeMobile;
+
+    if (desktop !== undefined || mobile !== undefined) {
+      registerAsset(desktop, mobile, `bannerUrl${i}`, i - 1);
+    }
+  }
+
+  delete payload.banner_assets;
+  delete payload.banner_urls;
+
+  for (let i = 1; i <= 10; i += 1) {
+    delete payload[`bannerUrl${i}Desktop`];
+    delete payload[`bannerUrl${i}Mobile`];
+    delete payload[`bannerUrl${i}_desktop`];
+    delete payload[`bannerUrl${i}_mobile`];
+  }
+
+  if (assets.length > 0) {
+    const cappedAssets = assets.slice(0, 10).map((asset, index) => ({
+      key: asset.key || `bannerUrl${index + 1}`,
+      desktop: asset.desktop,
+      mobile: asset.mobile
+    }));
+
+    payload.banner_assets = cappedAssets;
+
+    if (!payload.image_url) {
+      const primary = cappedAssets.find(item => item.desktop || item.mobile);
+      if (primary) {
+        payload.image_url = primary.desktop || primary.mobile || payload.image_url;
+      }
+    }
+  } else if (Array.isArray(input.banner_assets) && input.banner_assets.length === 0) {
+    payload.banner_assets = [];
+  } else if (isUpdate) {
+    // Do not overwrite existing assets when update does not include new data
+    delete payload.banner_assets;
+  }
+
+  if (typeof payload.image_url === 'string') {
+    payload.image_url = payload.image_url.trim();
+    if (payload.image_url === '') {
+      delete payload.image_url;
+    }
+  }
+
+  return payload;
+};
+
 // ==================== BEST SELLERS MANAGEMENT ====================
 
 // @route   GET /api/admin/content/best-sellers
@@ -1241,9 +1375,11 @@ router.get('/banners', async (req, res) => {
 
     const total = await Banner.countDocuments(query);
 
+    const formattedBanners = banners.map(formatBannerDocument);
+
     res.status(200).json({
       success: true,
-      data: banners,
+      data: formattedBanners,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -1277,7 +1413,7 @@ router.get('/banners/:id', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: banner
+      data: formatBannerDocument(banner)
     });
   } catch (error) {
     console.error('Get banner error:', error);
@@ -1294,12 +1430,13 @@ router.get('/banners/:id', async (req, res) => {
 // @access  Admin
 router.post('/banners', async (req, res) => {
   try {
-    const banner = await Banner.create(req.body);
+    const payload = normalizeBannerPayload(req.body);
+    const banner = await Banner.create(payload);
 
     res.status(201).json({
       success: true,
       message: 'Banner created successfully',
-      data: banner
+      data: formatBannerDocument(banner)
     });
   } catch (error) {
     console.error('Create banner error:', error);
@@ -1316,9 +1453,10 @@ router.post('/banners', async (req, res) => {
 // @access  Admin
 router.put('/banners/:id', async (req, res) => {
   try {
+    const payload = normalizeBannerPayload(req.body, { isUpdate: true });
     const banner = await Banner.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      payload,
       { new: true, runValidators: true }
     );
 
@@ -1332,7 +1470,7 @@ router.put('/banners/:id', async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Banner updated successfully',
-      data: banner
+      data: formatBannerDocument(banner)
     });
   } catch (error) {
     console.error('Update banner error:', error);

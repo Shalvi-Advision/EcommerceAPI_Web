@@ -42,7 +42,10 @@ Both APIs support:
 |-------|------|----------|-------------|
 | `title` | String | Yes | Banner title |
 | `section_name` | String | Yes | Section identifier (e.g., home_top, home_middle) |
-| `image_url` | String | Yes | Banner image URL |
+| `image_url` | String | No | Legacy fallback image URL (auto-populated from first banner variant if omitted) |
+| `banner_assets[]` | Array | Conditional | Up to 10 banner variants. Each item accepts `desktop` and/or `mobile` URLs plus optional `key`. |
+| `banner_urls.bannerUrlX.desktop` | String | Conditional | Alternative request shape — provide paired desktop/mobile URLs using keys `bannerUrl1` … `bannerUrl10`. |
+| `banner_urls.bannerUrlX.mobile` | String | Conditional | Alternative request shape — provide paired desktop/mobile URLs using keys `bannerUrl1` … `bannerUrl10`. |
 | `action.type` | String | Yes | Action type: `category`, `product`, `url`, `none` |
 | `action.value` | String | No | Action value (category ID, product SKU, URL, etc.) |
 | `store_code` | String | No | Single store code |
@@ -93,7 +96,29 @@ Both APIs support:
       "_id": "65a1b2c3d4e5f6g7h8i9j0k1",
       "title": "New Arrivals",
       "section_name": "home_top",
-      "image_url": "https://example.com/banners/home1.jpg",
+      "image_url": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+      "banner_urls": {
+        "bannerUrl1": {
+          "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+          "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+        },
+        "bannerUrl2": {
+          "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+          "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+        }
+      },
+      "banner_assets": [
+        {
+          "key": "bannerUrl1",
+          "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+          "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+        },
+        {
+          "key": "bannerUrl2",
+          "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+          "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+        }
+      ],
       "action": {
         "type": "category",
         "value": "woodenware"
@@ -133,7 +158,29 @@ Both APIs support:
     "_id": "65a1b2c3d4e5f6g7h8i9j0k1",
     "title": "New Arrivals",
     "section_name": "home_top",
-    "image_url": "https://example.com/banners/home1.jpg",
+    "image_url": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+    "banner_urls": {
+      "bannerUrl1": {
+        "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+        "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+      },
+      "bannerUrl2": {
+        "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+        "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+      }
+    },
+    "banner_assets": [
+      {
+        "key": "bannerUrl1",
+        "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+        "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+      },
+      {
+        "key": "bannerUrl2",
+        "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+        "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+      }
+    ],
     "action": {
       "type": "category",
       "value": "woodenware"
@@ -169,7 +216,16 @@ Both APIs support:
 {
   "title": "Flash Sale",
   "section_name": "home_top",
-  "image_url": "https://example.com/banners/flash-sale.jpg",
+  "banner_urls": {
+    "bannerUrl1": {
+      "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+      "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-1.jpg"
+    },
+    "bannerUrl2": {
+      "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-2.jpg",
+      "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-2.jpg"
+    }
+  },
   "action": {
     "type": "url",
     "value": "https://example.com/flash-sale"
@@ -195,7 +251,29 @@ Both APIs support:
     "_id": "65a1b2c3d4e5f6g7h8i9j0k2",
     "title": "Flash Sale",
     "section_name": "home_top",
-    "image_url": "https://example.com/banners/flash-sale.jpg",
+    "image_url": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+    "banner_urls": {
+      "bannerUrl1": {
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-1.jpg"
+      },
+      "bannerUrl2": {
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-2.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-2.jpg"
+      }
+    },
+    "banner_assets": [
+      {
+        "key": "bannerUrl1",
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-1.jpg"
+      },
+      {
+        "key": "bannerUrl2",
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-2.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-2.jpg"
+      }
+    ],
     "action": {
       "type": "url",
       "value": "https://example.com/flash-sale"
@@ -249,7 +327,29 @@ Both APIs support:
     "_id": "65a1b2c3d4e5f6g7h8i9j0k2",
     "title": "Updated Flash Sale",
     "section_name": "home_top",
-    "image_url": "https://example.com/banners/flash-sale.jpg",
+    "image_url": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+    "banner_urls": {
+      "bannerUrl1": {
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-1.jpg"
+      },
+      "bannerUrl2": {
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-2.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-2.jpg"
+      }
+    },
+    "banner_assets": [
+      {
+        "key": "bannerUrl1",
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-1.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-1.jpg"
+      },
+      {
+        "key": "bannerUrl2",
+        "desktop": "https://cdn.example.com/banners/home/flash-sale-desktop-2.jpg",
+        "mobile": "https://cdn.example.com/banners/home/flash-sale-mobile-2.jpg"
+      }
+    ],
     "action": {
       "type": "url",
       "value": "https://example.com/flash-sale"
@@ -329,7 +429,29 @@ Both APIs support:
           {
             "id": "65a1b2c3d4e5f6g7h8i9j0k1",
             "title": "New Arrivals",
-            "image_url": "https://example.com/banners/home1.jpg",
+            "image_url": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+            "banner_urls": {
+              "bannerUrl1": {
+                "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+                "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+              },
+              "bannerUrl2": {
+                "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+                "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+              }
+            },
+            "banner_assets": [
+              {
+                "key": "bannerUrl1",
+                "desktop": "https://cdn.example.com/banners/home/home-top-1-desktop.jpg",
+                "mobile": "https://cdn.example.com/banners/home/home-top-1-mobile.jpg"
+              },
+              {
+                "key": "bannerUrl2",
+                "desktop": "https://cdn.example.com/banners/home/home-top-2-desktop.jpg",
+                "mobile": "https://cdn.example.com/banners/home/home-top-2-mobile.jpg"
+              }
+            ],
             "action": {
               "type": "category",
               "value": "woodenware"
