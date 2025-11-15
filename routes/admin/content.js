@@ -3,10 +3,12 @@ const router = express.Router();
 const BestSeller = require('../../models/BestSeller');
 const Advertisement = require('../../models/Advertisement');
 const PopularCategory = require('../../models/PopularCategory');
+const SeasonalCategory = require('../../models/SeasonalCategory');
 const PaymentMode = require('../../models/PaymentMode');
 const Pincode = require('../../models/Pincode');
 const Store = require('../../models/Store');
 const DeliverySlot = require('../../models/DeliverySlot');
+const Banner = require('../../models/Banner');
 
 // ==================== BEST SELLERS MANAGEMENT ====================
 
@@ -474,6 +476,163 @@ router.delete('/popular-categories/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting popular category',
+      error: error.message
+    });
+  }
+});
+
+// ==================== SEASONAL CATEGORIES MANAGEMENT ====================
+
+// @route   GET /api/admin/content/seasonal-categories
+// @desc    Get all seasonal categories
+// @access  Admin
+router.get('/seasonal-categories', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = 'sequence',
+      sortOrder = 'asc'
+    } = req.query;
+
+    const query = {};
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const seasonalCategories = await SeasonalCategory.find(query)
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const total = await SeasonalCategory.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: seasonalCategories,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get seasonal categories error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching seasonal categories',
+      error: error.message
+    });
+  }
+});
+
+// @route   GET /api/admin/content/seasonal-categories/:id
+// @desc    Get single seasonal category by ID
+// @access  Admin
+router.get('/seasonal-categories/:id', async (req, res) => {
+  try {
+    const seasonalCategory = await SeasonalCategory.findById(req.params.id);
+
+    if (!seasonalCategory) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seasonal category not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: seasonalCategory
+    });
+  } catch (error) {
+    console.error('Get seasonal category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching seasonal category',
+      error: error.message
+    });
+  }
+});
+
+// @route   POST /api/admin/content/seasonal-categories
+// @desc    Create seasonal category
+// @access  Admin
+router.post('/seasonal-categories', async (req, res) => {
+  try {
+    const seasonalCategory = await SeasonalCategory.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'Seasonal category created successfully',
+      data: seasonalCategory
+    });
+  } catch (error) {
+    console.error('Create seasonal category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating seasonal category',
+      error: error.message
+    });
+  }
+});
+
+// @route   PUT /api/admin/content/seasonal-categories/:id
+// @desc    Update seasonal category
+// @access  Admin
+router.put('/seasonal-categories/:id', async (req, res) => {
+  try {
+    const seasonalCategory = await SeasonalCategory.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!seasonalCategory) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seasonal category not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Seasonal category updated successfully',
+      data: seasonalCategory
+    });
+  } catch (error) {
+    console.error('Update seasonal category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating seasonal category',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/admin/content/seasonal-categories/:id
+// @desc    Delete seasonal category
+// @access  Admin
+router.delete('/seasonal-categories/:id', async (req, res) => {
+  try {
+    const seasonalCategory = await SeasonalCategory.findByIdAndDelete(req.params.id);
+
+    if (!seasonalCategory) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seasonal category not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Seasonal category deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete seasonal category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting seasonal category',
       error: error.message
     });
   }
@@ -1045,6 +1204,169 @@ router.delete('/delivery-slots/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting delivery slot',
+      error: error.message
+    });
+  }
+});
+
+// ==================== BANNERS MANAGEMENT ====================
+
+// @route   GET /api/admin/content/banners
+// @desc    Get all banners
+// @access  Admin
+router.get('/banners', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      section_name = '',
+      sortBy = 'sequence',
+      sortOrder = 'asc'
+    } = req.query;
+
+    const query = {};
+
+    if (section_name) {
+      query.section_name = section_name;
+    }
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const banners = await Banner.find(query)
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const total = await Banner.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: banners,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get banners error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching banners',
+      error: error.message
+    });
+  }
+});
+
+// @route   GET /api/admin/content/banners/:id
+// @desc    Get single banner by ID
+// @access  Admin
+router.get('/banners/:id', async (req, res) => {
+  try {
+    const banner = await Banner.findById(req.params.id);
+
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: 'Banner not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: banner
+    });
+  } catch (error) {
+    console.error('Get banner error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching banner',
+      error: error.message
+    });
+  }
+});
+
+// @route   POST /api/admin/content/banners
+// @desc    Create banner
+// @access  Admin
+router.post('/banners', async (req, res) => {
+  try {
+    const banner = await Banner.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'Banner created successfully',
+      data: banner
+    });
+  } catch (error) {
+    console.error('Create banner error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating banner',
+      error: error.message
+    });
+  }
+});
+
+// @route   PUT /api/admin/content/banners/:id
+// @desc    Update banner
+// @access  Admin
+router.put('/banners/:id', async (req, res) => {
+  try {
+    const banner = await Banner.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: 'Banner not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Banner updated successfully',
+      data: banner
+    });
+  } catch (error) {
+    console.error('Update banner error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating banner',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/admin/content/banners/:id
+// @desc    Delete banner
+// @access  Admin
+router.delete('/banners/:id', async (req, res) => {
+  try {
+    const banner = await Banner.findByIdAndDelete(req.params.id);
+
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: 'Banner not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Banner deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete banner error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting banner',
       error: error.message
     });
   }

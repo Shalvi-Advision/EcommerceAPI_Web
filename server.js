@@ -53,6 +53,7 @@ const storeRoutes = require('./routes/stores');
 const departmentRoutes = require('./routes/departments');
 const bestSellerRoutes = require('./routes/best-sellers');
 const popularCategoryRoutes = require('./routes/popular-categories');
+const seasonalCategoryRoutes = require('./routes/seasonal-categories');
 const advertisementRoutes = require('./routes/advertisements');
 const adminRoutes = require('./routes/admin');
 
@@ -188,6 +189,7 @@ app.use('/api/stores', storeRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/best-sellers', bestSellerRoutes);
 app.use('/api/popular-categories', popularCategoryRoutes);
+app.use('/api/seasonal-categories', seasonalCategoryRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/admin', adminRoutes);
 
