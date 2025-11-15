@@ -3,6 +3,7 @@ const router = express.Router();
 
 const PopularCategory = require('../models/PopularCategory');
 const Subcategory = require('../models/Subcategory');
+const Category = require('../models/Category');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -142,6 +143,222 @@ const mapSubcategory = (subcategory) => ({
   sub_category_bg_color: subcategory.sub_category_bg_color
 });
 
+const mapCategory = (category) => ({
+  id: category._id,
+  idcategory_master: category.idcategory_master,
+  category_name: category.category_name,
+  dept_id: category.dept_id,
+  store_code: category.store_code,
+  sequence_id: category.sequence_id,
+  no_of_col: category.no_of_col,
+  image_link: category.image_link,
+  category_bg_color: category.category_bg_color
+});
+
+const toSafeString = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const str = value.toString().trim();
+  return str === '' ? null : str;
+};
+
+const addCandidateId = (set, value) => {
+  const stringValue = toSafeString(value);
+  if (stringValue) {
+    set.add(stringValue);
+  }
+};
+
+const buildEnrichmentMaps = async (sections) => {
+  const subcategoryIds = new Set();
+  const categoryIds = new Set();
+
+  sections.forEach((section) => {
+    const items = Array.isArray(section.subcategories) ? section.subcategories : [];
+    items.forEach((item) => {
+      addCandidateId(subcategoryIds, item.sub_category_id);
+
+      if (item?.metadata && typeof item.metadata === 'object') {
+        const { metadata } = item;
+        addCandidateId(subcategoryIds, metadata.sub_category_id);
+        addCandidateId(subcategoryIds, metadata.idsub_category_master);
+
+        addCandidateId(categoryIds, metadata.category_id);
+        addCandidateId(categoryIds, metadata.idcategory_master);
+        addCandidateId(categoryIds, metadata.categoryId);
+        addCandidateId(categoryIds, metadata.parent_category_id);
+        addCandidateId(categoryIds, metadata.category_master_id);
+      }
+    });
+  });
+
+  const subcategoryIdList = Array.from(subcategoryIds);
+  const subcategoriesFromDb = subcategoryIdList.length
+    ? await Subcategory.find({
+      idsub_category_master: { $in: subcategoryIdList }
+    }).lean()
+    : [];
+
+  const subcategoryMap = new Map();
+  subcategoriesFromDb.forEach((subcategory) => {
+    subcategoryMap.set(subcategory.idsub_category_master, mapSubcategory(subcategory));
+    addCandidateId(categoryIds, subcategory.category_id);
+  });
+
+  sections.forEach((section) => {
+    const items = Array.isArray(section.subcategories) ? section.subcategories : [];
+    items.forEach((item) => {
+      if (!subcategoryMap.has(item.sub_category_id)) {
+        addCandidateId(categoryIds, item.sub_category_id);
+      }
+    });
+  });
+
+  const categoryIdList = Array.from(categoryIds);
+  const categoriesFromDb = categoryIdList.length
+    ? await Category.find({
+      idcategory_master: { $in: categoryIdList }
+    }).lean()
+    : [];
+
+  const categoryMap = new Map();
+  categoriesFromDb.forEach((category) => {
+    categoryMap.set(category.idcategory_master, mapCategory(category));
+  });
+
+  return { subcategoryMap, categoryMap };
+};
+
+const resolveCategoryDetails = (item, subcategoryDetails, categoryMap) => {
+  const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+
+  const candidateCategoryIds = [
+    metadata.category_id,
+    metadata.idcategory_master,
+    metadata.categoryId,
+    metadata.parent_category_id,
+    metadata.category_master_id,
+    subcategoryDetails?.category_id
+  ];
+
+  if (!subcategoryDetails) {
+    candidateCategoryIds.push(item.sub_category_id);
+  }
+
+  const matched = candidateCategoryIds
+    .map(toSafeString)
+    .find((candidate) => candidate && categoryMap.has(candidate));
+
+  return matched ? categoryMap.get(matched) : null;
+};
+
+const resolveImageLink = (item, subcategoryDetails, categoryDetails) => {
+  const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+  const candidateImages = [
+    metadata.image_link,
+    metadata.image_url,
+    metadata.category_image,
+    metadata.subcategory_image,
+    subcategoryDetails?.image_link,
+    categoryDetails?.image_link
+  ];
+
+  const matched = candidateImages
+    .map((value) => {
+      const stringValue = toSafeString(value);
+      return stringValue || null;
+    })
+    .find((value) => value);
+
+  return matched || null;
+};
+
+const resolveCategoryUrl = (item, subcategoryDetails, categoryDetails) => {
+  const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+
+  const categoryUrlCandidates = [
+    metadata.category_url,
+    categoryDetails ? `app://category/${categoryDetails.idcategory_master}` : null,
+    !categoryDetails && subcategoryDetails?.category_id
+      ? `app://category/${subcategoryDetails.category_id}`
+      : null
+  ];
+
+  const matched = categoryUrlCandidates
+    .map((value) => {
+      const stringValue = toSafeString(value);
+      return stringValue || null;
+    })
+    .find((value) => value);
+
+  return matched || null;
+};
+
+const resolveSubcategoryUrl = (item, subcategoryDetails) => {
+  const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+
+  const subcategoryUrlCandidates = [
+    metadata.subcategory_url,
+    subcategoryDetails ? `app://subcategory/${subcategoryDetails.idsub_category_master}` : null
+  ];
+
+  const matched = subcategoryUrlCandidates
+    .map((value) => {
+      const stringValue = toSafeString(value);
+      return stringValue || null;
+    })
+    .find((value) => value);
+
+  return matched || null;
+};
+
+const enrichSubcategoryItem = (item, subcategoryMap, categoryMap) => {
+  const baseSubcategoryId = toSafeString(item.sub_category_id);
+  const metadata = item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+  const metadataSubcategoryId = toSafeString(metadata.sub_category_id || metadata.idsub_category_master);
+
+  const subcategoryDetails = baseSubcategoryId && subcategoryMap.has(baseSubcategoryId)
+    ? subcategoryMap.get(baseSubcategoryId)
+    : metadataSubcategoryId && subcategoryMap.has(metadataSubcategoryId)
+      ? subcategoryMap.get(metadataSubcategoryId)
+      : null;
+
+  const categoryDetails = resolveCategoryDetails(item, subcategoryDetails, categoryMap);
+  const imageLink = resolveImageLink(item, subcategoryDetails, categoryDetails);
+  const categoryUrl = resolveCategoryUrl(item, subcategoryDetails, categoryDetails);
+  const subcategoryUrl = resolveSubcategoryUrl(item, subcategoryDetails);
+
+  const resolvedRedirectUrl = toSafeString(item.redirect_url)
+    || categoryUrl
+    || subcategoryUrl
+    || null;
+
+  return {
+    ...item,
+    redirect_url: resolvedRedirectUrl,
+    subcategory_details: subcategoryDetails,
+    category_details: categoryDetails,
+    image_link: imageLink,
+    category_url: categoryUrl,
+    subcategory_url: subcategoryUrl
+  };
+};
+
+const enrichPopularCategorySections = async (sections) => {
+  if (!Array.isArray(sections) || sections.length === 0) {
+    return sections;
+  }
+
+  const { subcategoryMap, categoryMap } = await buildEnrichmentMaps(sections);
+
+  return sections.map((section) => ({
+    ...section,
+    subcategories: (section.subcategories || []).map((item) => enrichSubcategoryItem(item, subcategoryMap, categoryMap))
+  }));
+};
+
 router.post('/', async (req, res, next) => {
   try {
     const {
@@ -279,30 +496,9 @@ router.post('/list', async (req, res, next) => {
       });
     }
 
-    let responseData = popularCategories;
-
-    if (shouldEnrich) {
-      const subcategoryIds = Array.from(new Set(
-        popularCategories.flatMap(section => section.subcategories.map(item => item.sub_category_id))
-      ));
-
-      const subcategoriesFromDb = await Subcategory.find({
-        idsub_category_master: { $in: subcategoryIds }
-      });
-
-      const subcategoryMap = new Map();
-      subcategoriesFromDb.forEach((subcategory) => {
-        subcategoryMap.set(subcategory.idsub_category_master, mapSubcategory(subcategory));
-      });
-
-      responseData = popularCategories.map((section) => ({
-        ...section,
-        subcategories: section.subcategories.map((item) => ({
-          ...item,
-          subcategory_details: subcategoryMap.get(item.sub_category_id) || null
-        }))
-      }));
-    }
+    const responseData = shouldEnrich
+      ? await enrichPopularCategorySections(popularCategories)
+      : popularCategories;
 
     res.status(200).json({
       success: true,
@@ -330,28 +526,9 @@ router.get('/:id', async (req, res, next) => {
       });
     }
 
-    let responseData = popularCategory;
-
-    if (shouldEnrich) {
-      const subcategoryIds = popularCategory.subcategories.map(item => item.sub_category_id);
-
-      const subcategoriesFromDb = await Subcategory.find({
-        idsub_category_master: { $in: subcategoryIds }
-      });
-
-      const subcategoryMap = new Map();
-      subcategoriesFromDb.forEach((subcategory) => {
-        subcategoryMap.set(subcategory.idsub_category_master, mapSubcategory(subcategory));
-      });
-
-      responseData = {
-        ...popularCategory,
-        subcategories: popularCategory.subcategories.map((item) => ({
-          ...item,
-          subcategory_details: subcategoryMap.get(item.sub_category_id) || null
-        }))
-      };
-    }
+    const responseData = shouldEnrich
+      ? (await enrichPopularCategorySections([popularCategory]))[0]
+      : popularCategory;
 
     res.status(200).json({
       success: true,
