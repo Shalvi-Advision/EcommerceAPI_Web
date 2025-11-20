@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const BestSeller = require('../../models/BestSeller');
+const TopSeller = require('../../models/TopSeller');
 const Advertisement = require('../../models/Advertisement');
 const PopularCategory = require('../../models/PopularCategory');
 const SeasonalCategory = require('../../models/SeasonalCategory');
@@ -401,6 +402,163 @@ router.delete('/best-sellers/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting best seller',
+      error: error.message
+    });
+  }
+});
+
+// ==================== TOP SELLERS MANAGEMENT ====================
+
+// @route   GET /api/admin/content/top-sellers
+// @desc    Get all top sellers
+// @access  Admin
+router.get('/top-sellers', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = 'sequence',
+      sortOrder = 'asc'
+    } = req.query;
+
+    const query = {};
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const topSellers = await TopSeller.find(query)
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const total = await TopSeller.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: topSellers,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get top sellers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top sellers',
+      error: error.message
+    });
+  }
+});
+
+// @route   GET /api/admin/content/top-sellers/:id
+// @desc    Get single top seller by ID
+// @access  Admin
+router.get('/top-sellers/:id', async (req, res) => {
+  try {
+    const topSeller = await TopSeller.findById(req.params.id);
+
+    if (!topSeller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Top seller not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: topSeller
+    });
+  } catch (error) {
+    console.error('Get top seller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top seller',
+      error: error.message
+    });
+  }
+});
+
+// @route   POST /api/admin/content/top-sellers
+// @desc    Create top seller
+// @access  Admin
+router.post('/top-sellers', async (req, res) => {
+  try {
+    const topSeller = await TopSeller.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'Top seller created successfully',
+      data: topSeller
+    });
+  } catch (error) {
+    console.error('Create top seller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating top seller',
+      error: error.message
+    });
+  }
+});
+
+// @route   PUT /api/admin/content/top-sellers/:id
+// @desc    Update top seller
+// @access  Admin
+router.put('/top-sellers/:id', async (req, res) => {
+  try {
+    const topSeller = await TopSeller.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!topSeller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Top seller not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Top seller updated successfully',
+      data: topSeller
+    });
+  } catch (error) {
+    console.error('Update top seller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating top seller',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/admin/content/top-sellers/:id
+// @desc    Delete top seller
+// @access  Admin
+router.delete('/top-sellers/:id', async (req, res) => {
+  try {
+    const topSeller = await TopSeller.findByIdAndDelete(req.params.id);
+
+    if (!topSeller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Top seller not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Top seller deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete top seller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting top seller',
       error: error.message
     });
   }
