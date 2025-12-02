@@ -185,9 +185,33 @@ router.post('/validate-cart', protect, async (req, res, next) => {
     // Validate cart items
     const validationResults = await cart.validateItems();
 
+    // Determine overall message and status
+    let overallMessage = 'Cart validation successful';
+    let overallStatus = 'valid';
+    
+    if (!validationResults.valid) {
+      overallStatus = 'invalid';
+      if (validationResults.invalidItems.length > 0) {
+        const outOfStockCount = validationResults.invalidItems.filter(item => item.actionType === 'out_of_stock').length;
+        const insufficientStockCount = validationResults.invalidItems.filter(item => item.actionType === 'insufficient_stock').length;
+        
+        if (outOfStockCount > 0) {
+          overallMessage = `${outOfStockCount} product(s) out of stock`;
+        } else if (insufficientStockCount > 0) {
+          overallMessage = `${insufficientStockCount} product(s) have insufficient stock`;
+        } else {
+          overallMessage = `${validationResults.invalidItems.length} product(s) need attention`;
+        }
+      }
+    } else if (validationResults.updatedItems.length > 0) {
+      overallStatus = 'price_updated';
+      overallMessage = `${validationResults.updatedItems.length} product(s) have price changes`;
+    }
+
     res.status(200).json({
       success: true,
-      message: validationResults.valid ? 'Cart validation successful' : 'Cart validation found issues',
+      message: overallMessage,
+      status: overallStatus,
       store_code: store_code.trim(),
       project_code: project_code,
       mobile_no: userMobile,
@@ -197,7 +221,14 @@ router.post('/validate-cart', protect, async (req, res, next) => {
         validItems: validationResults.totalValidItems,
         invalidItems: validationResults.totalInvalidItems,
         updatedItems: validationResults.updatedItems,
-        invalidItems: validationResults.invalidItems
+        invalidItems: validationResults.invalidItems,
+        // Summary for quick frontend checks
+        summary: {
+          hasPriceChanges: validationResults.updatedItems.length > 0,
+          hasStockIssues: validationResults.invalidItems.length > 0,
+          hasOutOfStock: validationResults.invalidItems.some(item => item.actionType === 'out_of_stock'),
+          requiresAction: !validationResults.valid || validationResults.updatedItems.length > 0
+        }
       }
     });
   } catch (error) {

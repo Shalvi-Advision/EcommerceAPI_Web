@@ -166,6 +166,29 @@ cartSchema.methods.validateItems = async function() {
     totalInvalidItems: 0
   };
 
+  // Helper function to format product data for frontend
+  const formatProductData = (product) => {
+    return {
+      p_code: product.p_code,
+      product_name: product.product_name,
+      product_description: product.product_description,
+      package_size: product.package_size,
+      package_unit: product.package_unit,
+      product_mrp: product.product_mrp ? parseFloat(product.product_mrp.toString()) : 0,
+      our_price: product.our_price ? parseFloat(product.our_price.toString()) : 0,
+      brand_name: product.brand_name,
+      store_code: product.store_code,
+      pcode_status: product.pcode_status,
+      dept_id: product.dept_id,
+      category_id: product.category_id,
+      sub_category_id: product.sub_category_id,
+      store_quantity: product.store_quantity,
+      max_quantity_allowed: product.max_quantity_allowed,
+      pcode_img: product.pcode_img,
+      barcode: product.barcode
+    };
+  };
+
   for (let i = 0; i < this.items.length; i++) {
     const cartItem = this.items[i];
 
@@ -182,73 +205,203 @@ cartSchema.methods.validateItems = async function() {
         validationResults.valid = false;
         validationResults.invalidItems.push({
           index: i,
+          action: 'remove', // Frontend action: remove from cart
+          actionType: 'product_not_found',
+          message: 'Product not found or inactive',
           p_code: cartItem.p_code,
-          reason: 'Product not found or inactive',
-          cartItem: cartItem
+          cartItem: cartItem,
+          product: null, // No product data available
+          suggestedAction: {
+            type: 'remove',
+            message: 'This product is no longer available. Please remove it from your cart.'
+          }
         });
         validationResults.totalInvalidItems++;
         continue;
       }
 
-      // Check if price has changed
+      // Format current product data
+      const currentProductData = formatProductData(currentProduct);
       const currentPrice = parseFloat(currentProduct.our_price?.toString() || '0');
+      const currentStock = currentProduct.store_quantity || 0;
+      const maxAllowed = currentProduct.max_quantity_allowed || null;
+      const requestedQuantity = cartItem.quantity;
+
+      // Track if item has issues
+      let itemHasIssues = false;
+      const itemIssues = [];
+
+      // Check if price has changed
       if (currentPrice !== cartItem.unit_price) {
-        validationResults.updatedItems.push({
-          index: i,
-          p_code: cartItem.p_code,
-          oldPrice: cartItem.unit_price,
-          newPrice: currentPrice,
-          priceDifference: currentPrice - cartItem.unit_price,
-          cartItem: cartItem,
-          currentProduct: {
-            product_name: currentProduct.product_name,
-            brand_name: currentProduct.brand_name,
-            package_size: currentProduct.package_size,
-            package_unit: currentProduct.package_unit,
-            pcode_img: currentProduct.pcode_img,
-            store_quantity: currentProduct.store_quantity,
-            max_quantity_allowed: currentProduct.max_quantity_allowed
-          }
-        });
+        itemHasIssues = true;
+        itemIssues.push('price_changed');
       }
 
       // Check stock availability
-      if (currentProduct.store_quantity < cartItem.quantity) {
+      if (currentStock === 0) {
         validationResults.valid = false;
         validationResults.invalidItems.push({
           index: i,
+          action: 'update_quantity', // Frontend action: update quantity to 0 or remove
+          actionType: 'out_of_stock',
+          message: 'Product is out of stock',
           p_code: cartItem.p_code,
-          reason: `Insufficient stock. Available: ${currentProduct.store_quantity}, Requested: ${cartItem.quantity}`,
           cartItem: cartItem,
-          availableQuantity: currentProduct.store_quantity
+          product: currentProductData,
+          stock: {
+            available: 0,
+            requested: requestedQuantity,
+            status: 'out_of_stock'
+          },
+          price: {
+            old: cartItem.unit_price,
+            new: currentPrice,
+            changed: currentPrice !== cartItem.unit_price
+          },
+          suggestedAction: {
+            type: 'update_quantity',
+            message: 'This product is out of stock. Please remove it or wait for restock.',
+            options: [
+              { action: 'remove', label: 'Remove from cart' },
+              { action: 'keep', label: 'Keep for later (will notify when available)' }
+            ]
+          }
+        });
+        validationResults.totalInvalidItems++;
+        continue;
+      }
+
+      // Check if stock is insufficient
+      if (currentStock < requestedQuantity) {
+        validationResults.valid = false;
+        itemHasIssues = true;
+        itemIssues.push('insufficient_stock');
+        
+        validationResults.invalidItems.push({
+          index: i,
+          action: 'update_quantity', // Frontend action: reduce quantity
+          actionType: 'insufficient_stock',
+          message: `Only ${currentStock} item(s) available. You requested ${requestedQuantity}.`,
+          p_code: cartItem.p_code,
+          cartItem: cartItem,
+          product: currentProductData,
+          stock: {
+            available: currentStock,
+            requested: requestedQuantity,
+            status: 'insufficient',
+            maxAvailable: currentStock
+          },
+          price: {
+            old: cartItem.unit_price,
+            new: currentPrice,
+            changed: currentPrice !== cartItem.unit_price
+          },
+          suggestedAction: {
+            type: 'update_quantity',
+            message: `Only ${currentStock} item(s) available. Update quantity to ${currentStock}?`,
+            newQuantity: currentStock,
+            options: [
+              { action: 'update', label: `Update to ${currentStock}`, quantity: currentStock },
+              { action: 'remove', label: 'Remove from cart' }
+            ]
+          }
         });
         validationResults.totalInvalidItems++;
         continue;
       }
 
       // Check max quantity allowed
-      if (currentProduct.max_quantity_allowed && cartItem.quantity > currentProduct.max_quantity_allowed) {
+      if (maxAllowed && requestedQuantity > maxAllowed) {
         validationResults.valid = false;
+        itemHasIssues = true;
+        itemIssues.push('max_quantity_exceeded');
+        
         validationResults.invalidItems.push({
           index: i,
+          action: 'update_quantity', // Frontend action: reduce quantity
+          actionType: 'max_quantity_exceeded',
+          message: `Maximum ${maxAllowed} item(s) allowed per order. You requested ${requestedQuantity}.`,
           p_code: cartItem.p_code,
-          reason: `Quantity exceeds maximum allowed. Max: ${currentProduct.max_quantity_allowed}, Requested: ${cartItem.quantity}`,
           cartItem: cartItem,
-          maxAllowed: currentProduct.max_quantity_allowed
+          product: currentProductData,
+          stock: {
+            available: currentStock,
+            requested: requestedQuantity,
+            status: 'available',
+            maxAllowed: maxAllowed
+          },
+          price: {
+            old: cartItem.unit_price,
+            new: currentPrice,
+            changed: currentPrice !== cartItem.unit_price
+          },
+          suggestedAction: {
+            type: 'update_quantity',
+            message: `Maximum ${maxAllowed} item(s) allowed. Update quantity to ${maxAllowed}?`,
+            newQuantity: maxAllowed,
+            options: [
+              { action: 'update', label: `Update to ${maxAllowed}`, quantity: maxAllowed },
+              { action: 'remove', label: 'Remove from cart' }
+            ]
+          }
         });
         validationResults.totalInvalidItems++;
         continue;
       }
 
-      validationResults.totalValidItems++;
+      // If price changed but stock is fine, add to updatedItems
+      if (currentPrice !== cartItem.unit_price) {
+        validationResults.updatedItems.push({
+          index: i,
+          action: 'update_price', // Frontend action: update price
+          actionType: 'price_changed',
+          message: `Price updated from ₹${cartItem.unit_price} to ₹${currentPrice}`,
+          p_code: cartItem.p_code,
+          cartItem: cartItem,
+          product: currentProductData,
+          price: {
+            old: cartItem.unit_price,
+            new: currentPrice,
+            difference: currentPrice - cartItem.unit_price,
+            percentageChange: ((currentPrice - cartItem.unit_price) / cartItem.unit_price * 100).toFixed(2)
+          },
+          stock: {
+            available: currentStock,
+            requested: requestedQuantity,
+            status: 'available'
+          },
+          suggestedAction: {
+            type: 'update_price',
+            message: `Price has changed. Update cart with new price ₹${currentPrice}?`,
+            newTotalPrice: currentPrice * requestedQuantity,
+            options: [
+              { action: 'update', label: 'Update price', newPrice: currentPrice },
+              { action: 'remove', label: 'Remove from cart' }
+            ]
+          }
+        });
+      }
+
+      // Item is valid
+      if (!itemHasIssues) {
+        validationResults.totalValidItems++;
+      }
 
     } catch (error) {
       validationResults.valid = false;
       validationResults.invalidItems.push({
         index: i,
+        action: 'remove',
+        actionType: 'validation_error',
+        message: `Validation error: ${error.message}`,
         p_code: cartItem.p_code,
-        reason: `Validation error: ${error.message}`,
-        cartItem: cartItem
+        cartItem: cartItem,
+        product: null,
+        error: error.message,
+        suggestedAction: {
+          type: 'remove',
+          message: 'Unable to validate this product. Please remove it from your cart.'
+        }
       });
       validationResults.totalInvalidItems++;
     }
