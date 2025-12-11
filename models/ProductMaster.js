@@ -78,6 +78,14 @@ const productMasterSchema = new mongoose.Schema({
   pcode_img: {
     type: String,
     trim: true
+  },
+  search_keyword: {
+    type: String,
+    trim: true
+  },
+  project_code: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true,
@@ -94,33 +102,33 @@ productMasterSchema.index({ store_code: 1, dept_id: 1, category_id: 1, sub_categ
 productMasterSchema.index({ product_name: 'text', product_description: 'text' });
 
 // Static method to find products by filters
-productMasterSchema.statics.findByFilters = function(filters) {
+productMasterSchema.statics.findByFilters = function (filters) {
   const query = {};
-  
+
   if (filters.store_code) {
     query.store_code = filters.store_code;
   }
-  
+
   if (filters.dept_id) {
     query.dept_id = filters.dept_id;
   }
-  
+
   if (filters.category_id) {
     query.category_id = filters.category_id;
   }
-  
+
   if (filters.sub_category_id) {
     query.sub_category_id = filters.sub_category_id;
   }
-  
+
   // Only return active products
   query.pcode_status = 'Y';
-  
+
   return this.find(query).sort({ product_name: 1 });
 };
 
 // Static method to find all products sorted by product name
-productMasterSchema.statics.findAllSorted = function() {
+productMasterSchema.statics.findAllSorted = function () {
   return this.find({ pcode_status: 'Y' }).sort({ product_name: 1 });
 };
 

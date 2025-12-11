@@ -32,6 +32,10 @@ const departmentSchema = new mongoose.Schema({
   sequence_id: {
     type: Number,
     required: [true, 'Sequence ID is required']
+  },
+  project_code: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true,
@@ -46,7 +50,7 @@ departmentSchema.index({ sequence_id: 1 });
 departmentSchema.index({ store_code: 1, sequence_id: 1 });
 
 // Static method to find departments by store code
-departmentSchema.statics.findByStoreCode = function(storeCode) {
+departmentSchema.statics.findByStoreCode = function (storeCode) {
   let query;
   if (storeCode === 'null' || storeCode === null) {
     // Handle both null and "null" - search for actual null values in database
@@ -58,18 +62,18 @@ departmentSchema.statics.findByStoreCode = function(storeCode) {
 };
 
 // Static method to find all departments sorted by sequence
-departmentSchema.statics.findAllSorted = function() {
+departmentSchema.statics.findAllSorted = function () {
   return this.find().sort({ sequence_id: 1 });
 };
 
 // Static method to find departments by type
-departmentSchema.statics.findByType = function(deptTypeId, storeCode = null) {
+departmentSchema.statics.findByType = function (deptTypeId, storeCode = null) {
   const query = { dept_type_id: deptTypeId };
-  
+
   if (storeCode) {
     query.store_code = storeCode;
   }
-  
+
   return this.find(query).sort({ sequence_id: 1 });
 };
 

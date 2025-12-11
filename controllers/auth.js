@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const sms = require('../utils/sms');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -37,23 +38,17 @@ const sendOtp = async (req, res) => {
     }
 
     // Find or create user
-    let user = await User.findOrCreateByMobile(mobile);
+    // We still ensure user exists in DB, even if we don't store OTP there
+    await User.findOrCreateByMobile(mobile);
 
-    // Generate OTP
-    const otp = user.generateOtp();
+    // Send valid OTP via SMS Gateway
+    const smsResponse = await sms.sendOtp(mobile);
+    console.log(`SMS OTP Sent to ${mobile}:`, smsResponse);
 
-    // Save user with new OTP
-    await user.save();
-
-    // In production, you would send OTP via SMS here
-    // For now, we'll just log it for testing
-    console.log(`OTP for ${mobile}: ${otp}`);
-
-    // Send success response (don't send actual OTP for security)
+    // Send success response
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully',
-      otp: process.env.NODE_ENV === 'development' ? otp : undefined, // Only show OTP in development
+      message: 'OTP sent successfully to your mobile number',
       expiresIn: 5 // minutes
     });
 
@@ -91,15 +86,6 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Validate OTP format (4 digits)
-    const otpRegex = /^\d{4}$/;
-    if (!otpRegex.test(otp)) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP must be 4 digits'
-      });
-    }
-
     // Find user by mobile
     const user = await User.findByMobile(mobile);
 
@@ -110,20 +96,23 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Verify OTP
-    const verificationResult = user.verifyOtp(otp);
+    // Verify OTP via SMS Gateway Provider
+    const isValid = await sms.verifyOtp(mobile, otp);
 
-    if (!verificationResult.valid) {
+    if (!isValid) {
       return res.status(400).json({
         success: false,
-        message: verificationResult.message
+        message: 'Invalid OTP or OTP expired'
       });
     }
 
     // Set last active timestamp
     user.lastActiveAt = new Date();
 
-    // Save verified user
+    // Save verified user (marks as verified if not already)
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
     await user.save();
 
     // Generate JWT token

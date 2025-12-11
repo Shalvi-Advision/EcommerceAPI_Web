@@ -36,6 +36,10 @@ const categorySchema = new mongoose.Schema({
   category_bg_color: {
     type: String,
     trim: true
+  },
+  project_code: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true,
@@ -51,23 +55,23 @@ categorySchema.index({ store_code: 1, dept_id: 1 });
 categorySchema.index({ store_code: 1, sequence_id: 1 });
 
 // Static method to find categories by store code and department ID
-categorySchema.statics.findByStoreAndDepartment = function(storeCode, deptId) {
+categorySchema.statics.findByStoreAndDepartment = function (storeCode, deptId) {
   const query = { store_code: storeCode };
-  
+
   if (deptId) {
     query.dept_id = deptId;
   }
-  
+
   return this.find(query).sort({ sequence_id: 1 });
 };
 
 // Static method to find categories by store code only
-categorySchema.statics.findByStoreCode = function(storeCode) {
+categorySchema.statics.findByStoreCode = function (storeCode) {
   return this.find({ store_code: storeCode }).sort({ sequence_id: 1 });
 };
 
 // Static method to find all categories sorted by sequence
-categorySchema.statics.findAllSorted = function() {
+categorySchema.statics.findAllSorted = function () {
   return this.find().sort({ sequence_id: 1 });
 };
 
