@@ -106,8 +106,13 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Set last active timestamp
+    // Set last active timestamp and login timestamp
     user.lastActiveAt = new Date();
+    user.lastLoginAt = new Date();
+
+    // Clear legacy OTP fields if present
+    user.otp = undefined;
+    user.otpExpiresAt = undefined;
 
     // Save verified user (marks as verified if not already)
     if (!user.isVerified) {
