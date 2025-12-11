@@ -302,7 +302,17 @@ router.get('/my-orders', protect, async (req, res, next) => {
       payment_mode: order.payment_info.payment_mode_name,
       payment_status: order.payment_info.payment_status,
       order_summary: order.order_summary,
-      items_count: order.order_summary.total_items
+      items_count: order.order_summary.total_items,
+      order_items: order.order_items.map(item => ({
+        product_code: item.product_code,
+        product_name: item.product_name,
+        product_brand: item.product_brand,
+        product_image: item.product_image,
+        unit_price: item.unit_price,
+        quantity: item.quantity,
+        total_price: item.total_price,
+        uom: item.uom
+      }))
     }));
 
     res.status(200).json({

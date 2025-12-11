@@ -58,6 +58,7 @@ const popularCategoryRoutes = require('./routes/popular-categories');
 const seasonalCategoryRoutes = require('./routes/seasonal-categories');
 const advertisementRoutes = require('./routes/advertisements');
 const adminRoutes = require('./routes/admin');
+const razorpayRoutes = require('./routes/razorpay');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -195,6 +196,7 @@ app.use('/api/popular-categories', popularCategoryRoutes);
 app.use('/api/seasonal-categories', seasonalCategoryRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/razorpay', razorpayRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);
