@@ -96,7 +96,7 @@ router.post('/save-cart', protect, async (req, res, next) => {
     const cart = await Cart.findOneAndUpdate(
       { mobile_no: userMobile },
       {
-        mobile_no: userMobile,
+        mobile_no: req.user.mobile, // Fix reference
         store_code: store_code.trim(),
         project_code: project_code.trim(),
         items: items,
@@ -141,7 +141,7 @@ router.post('/save-cart', protect, async (req, res, next) => {
  */
 router.post('/validate-cart', protect, async (req, res, next) => {
   try {
-    const { store_code, project_code } = req.body;
+    const { store_code, project_code, autoFix } = req.body;
 
     // Validate required fields
     if (!store_code || store_code.trim() === '') {
@@ -185,16 +185,109 @@ router.post('/validate-cart', protect, async (req, res, next) => {
     // Validate cart items
     const validationResults = await cart.validateItems();
 
+    // Auto-fix logic if requested
+    if (autoFix && (!validationResults.valid || validationResults.updatedItems.length > 0)) {
+      const changes = [];
+      let modified = false;
+      const newItems = [];
+
+      // Map issues by p_code for easy lookup
+      const issueMap = new Map();
+      validationResults.invalidItems.forEach(item => issueMap.set(item.p_code, item));
+      validationResults.updatedItems.forEach(item => issueMap.set(item.p_code, item));
+
+      for (const item of cart.items) {
+        const issue = issueMap.get(item.p_code);
+
+        if (issue) {
+          // Handle Quantity/Stock Issues
+          if (issue.actionType === 'out_of_stock' || issue.action === 'remove' || issue.actionType === 'product_not_found') {
+            changes.push({
+              type: 'remove',
+              item: item.product_name,
+              reason: 'Out of stock'
+            });
+            modified = true;
+            // Logic: Do not push to newItems (effectively removing it)
+          }
+          else if (issue.actionType === 'insufficient_stock' || issue.actionType === 'max_quantity_exceeded') {
+            const newQty = issue.available_quantity;
+            if (newQty > 0) {
+              item.quantity = newQty;
+              item.total_price = item.quantity * item.unit_price; // Recalculate total with current unit price
+              newItems.push(item);
+              changes.push({
+                type: 'quantity',
+                item: item.product_name,
+                from: issue.stock.requested,
+                to: newQty
+              });
+              modified = true;
+            } else {
+              changes.push({
+                type: 'remove',
+                item: item.product_name,
+                reason: 'Out of stock'
+              });
+              modified = true;
+            }
+          }
+          // Handle Price Issues
+          else if (issue.actionType === 'price_changed') {
+            const newPrice = issue.price.new;
+            const oldPrice = issue.price.old;
+            item.unit_price = newPrice;
+            item.total_price = item.quantity * newPrice;
+            newItems.push(item);
+            changes.push({
+              type: 'price',
+              item: item.product_name,
+              from: oldPrice,
+              to: newPrice
+            });
+            modified = true;
+          }
+          else {
+            // Unknown issue, keep item safe
+            newItems.push(item);
+          }
+        } else {
+          // No issue
+          newItems.push(item);
+        }
+      }
+
+      if (modified) {
+        cart.items = newItems;
+        await cart.save();
+
+        return res.status(200).json({
+          success: true,
+          fixed: true,
+          message: 'Cart automatically updated based on latest stock and prices',
+          changes: changes,
+          store_code: store_code.trim(),
+          project_code: project_code,
+          mobile_no: userMobile,
+          validation: {
+            valid: false, // It was invalid before fix (signals frontend to show modal)
+            fixed: true,
+            changes: changes
+          }
+        });
+      }
+    }
+
     // Determine overall message and status
     let overallMessage = 'Cart validation successful';
     let overallStatus = 'valid';
-    
+
     if (!validationResults.valid) {
       overallStatus = 'invalid';
       if (validationResults.invalidItems.length > 0) {
         const outOfStockCount = validationResults.invalidItems.filter(item => item.actionType === 'out_of_stock').length;
         const insufficientStockCount = validationResults.invalidItems.filter(item => item.actionType === 'insufficient_stock').length;
-        
+
         if (outOfStockCount > 0) {
           overallMessage = `${outOfStockCount} product(s) out of stock`;
         } else if (insufficientStockCount > 0) {

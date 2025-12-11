@@ -100,7 +100,7 @@ cartSchema.index({ last_updated: -1 });
 cartSchema.index({ 'items.p_code': 1 });
 
 // Pre-save middleware to calculate totals
-cartSchema.pre('save', function(next) {
+cartSchema.pre('save', function (next) {
   let subtotal = 0;
   let totalQuantity = 0;
   let totalItems = this.items.length;
@@ -119,12 +119,12 @@ cartSchema.pre('save', function(next) {
 });
 
 // Static method to find cart by mobile number
-cartSchema.statics.findByMobile = function(mobileNo) {
+cartSchema.statics.findByMobile = function (mobileNo) {
   return this.findOne({ mobile_no: mobileNo });
 };
 
 // Static method to find or create cart for user
-cartSchema.statics.findOrCreateByMobile = function(mobileNo, storeCode, projectCode) {
+cartSchema.statics.findOrCreateByMobile = function (mobileNo, storeCode, projectCode) {
   return this.findOneAndUpdate(
     { mobile_no: mobileNo },
     {
@@ -141,7 +141,7 @@ cartSchema.statics.findOrCreateByMobile = function(mobileNo, storeCode, projectC
 };
 
 // Static method to clear cart
-cartSchema.statics.clearCart = function(mobileNo) {
+cartSchema.statics.clearCart = function (mobileNo) {
   return this.findOneAndUpdate(
     { mobile_no: mobileNo },
     {
@@ -156,7 +156,7 @@ cartSchema.statics.clearCart = function(mobileNo) {
 };
 
 // Instance method to validate cart items against current product data
-cartSchema.methods.validateItems = async function() {
+cartSchema.methods.validateItems = async function () {
   const ProductMaster = require('./ProductMaster');
   const validationResults = {
     valid: true,
@@ -209,6 +209,8 @@ cartSchema.methods.validateItems = async function() {
           actionType: 'product_not_found',
           message: 'Product not found or inactive',
           p_code: cartItem.p_code,
+          product_name: cartItem.product_name,
+          available_quantity: 0,
           cartItem: cartItem,
           product: null, // No product data available
           suggestedAction: {
@@ -242,10 +244,13 @@ cartSchema.methods.validateItems = async function() {
         validationResults.valid = false;
         validationResults.invalidItems.push({
           index: i,
-          action: 'update_quantity', // Frontend action: update quantity to 0 or remove
+          action: 'update_quantity',
           actionType: 'out_of_stock',
           message: 'Product is out of stock',
           p_code: cartItem.p_code,
+          product_name: cartItem.product_name,
+          available_quantity: 0,
+          current_price: currentPrice,
           cartItem: cartItem,
           product: currentProductData,
           stock: {
@@ -276,13 +281,16 @@ cartSchema.methods.validateItems = async function() {
         validationResults.valid = false;
         itemHasIssues = true;
         itemIssues.push('insufficient_stock');
-        
+
         validationResults.invalidItems.push({
           index: i,
-          action: 'update_quantity', // Frontend action: reduce quantity
+          action: 'update_quantity',
           actionType: 'insufficient_stock',
           message: `Only ${currentStock} item(s) available. You requested ${requestedQuantity}.`,
           p_code: cartItem.p_code,
+          product_name: cartItem.product_name,
+          available_quantity: currentStock,
+          current_price: currentPrice,
           cartItem: cartItem,
           product: currentProductData,
           stock: {
@@ -315,13 +323,17 @@ cartSchema.methods.validateItems = async function() {
         validationResults.valid = false;
         itemHasIssues = true;
         itemIssues.push('max_quantity_exceeded');
-        
+
         validationResults.invalidItems.push({
           index: i,
-          action: 'update_quantity', // Frontend action: reduce quantity
+          action: 'update_quantity',
           actionType: 'max_quantity_exceeded',
           message: `Maximum ${maxAllowed} item(s) allowed per order. You requested ${requestedQuantity}.`,
           p_code: cartItem.p_code,
+          product_name: cartItem.product_name,
+          available_quantity: maxAllowed, // Treat max allowed as available cap
+          max_allowed: maxAllowed,
+          current_price: currentPrice,
           cartItem: cartItem,
           product: currentProductData,
           stock: {
