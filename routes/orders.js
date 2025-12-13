@@ -304,14 +304,14 @@ router.get('/my-orders', protect, async (req, res, next) => {
       order_summary: order.order_summary,
       items_count: order.order_summary.total_items,
       order_items: order.order_items.map(item => ({
-        product_code: item.product_code,
+        product_code: item.p_code,
         product_name: item.product_name,
-        product_brand: item.product_brand,
-        product_image: item.product_image,
+        product_brand: item.brand_name,
+        product_image: item.pcode_img, // Map pcode_img to product_image
         unit_price: item.unit_price,
         quantity: item.quantity,
         total_price: item.total_price,
-        uom: item.uom
+        uom: item.package_unit
       }))
     }));
 
