@@ -6,7 +6,7 @@ const SMS_CONFIG = {
     userId: process.env.SMS_USER_ID || 'shalviadvision',
     password: process.env.SMS_PASSWORD || 'Pall@vi1985',
     senderId: process.env.SMS_SENDER_ID || 'SHALVI',
-    clientName: process.env.SMS_CLIENT_NAME || 'SHALVI', // Based on usage in PHP: "Dear SHALVI Customer..."
+    clientName: process.env.SMS_CLIENT_NAME || 'Pagariya Ecom', // Based on usage in PHP: "Dear SHALVI Customer..."
     defaultOtp: process.env.SMS_DEFAULT_OTP || '2786' // Backdoor OTP from PHP script
 };
 
@@ -22,7 +22,7 @@ const sendOtp = async (mobile) => {
         const formattedMobile = mobile.startsWith('91') ? mobile : `91${mobile}`;
 
         // Construct message template - note the escaped $otp$ which the provider replaces
-        const msg = `Dear ${SMS_CONFIG.clientName} Pagariya Ecom Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
+        const msg = `Dear ${SMS_CONFIG.clientName}  Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
 
         // Construct params
         const params = new URLSearchParams();
