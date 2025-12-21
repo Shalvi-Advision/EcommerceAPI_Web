@@ -22,7 +22,7 @@ const sendOtp = async (mobile) => {
         const formattedMobile = mobile.startsWith('91') ? mobile : `91${mobile}`;
 
         // Construct message template - note the escaped $otp$ which the provider replaces
-        const msg = `Dear ${SMS_CONFIG.clientName}  Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
+        const msg = `Dear ${SMS_CONFIG.clientName} Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
 
         // Construct params
         const params = new URLSearchParams();
