@@ -9,32 +9,20 @@ const initializeFirebase = () => {
     }
 
     try {
-        // Check if service account key file exists
-        const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+        // Initialize with JSON from environment variable
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-        if (serviceAccountPath) {
-            // Initialize with service account file
-            const serviceAccount = require(serviceAccountPath);
+        if (serviceAccountJson) {
+            const serviceAccount = JSON.parse(serviceAccountJson);
             firebaseApp = admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount)
             });
+            console.log('Firebase Admin SDK initialized successfully');
+            return firebaseApp;
         } else {
-            // Initialize with JSON from environment variable
-            const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-            if (serviceAccountJson) {
-                const serviceAccount = JSON.parse(serviceAccountJson);
-                firebaseApp = admin.initializeApp({
-                    credential: admin.credential.cert(serviceAccount)
-                });
-            } else {
-                console.warn('Firebase Admin SDK not initialized: No service account credentials provided');
-                return null;
-            }
+            console.warn('Firebase Admin SDK not initialized: No service account credentials provided');
+            return null;
         }
-
-        console.log('Firebase Admin SDK initialized successfully');
-        return firebaseApp;
     } catch (error) {
         console.error('Failed to initialize Firebase Admin SDK:', error.message);
         return null;
