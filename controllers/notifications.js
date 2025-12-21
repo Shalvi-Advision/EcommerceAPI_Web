@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const fcm = require('../utils/fcm');
 
 // @desc    Send notification to a specific user
@@ -33,10 +34,20 @@ const sendNotificationToUser = async (req, res) => {
             });
         }
 
+        // Create notification record in database regardless of FCM token presence
+        // (User can see it in-app even if push fails)
+        await Notification.create({
+            user: userId,
+            title,
+            body,
+            data: data || {},
+            type: 'system'
+        });
+
         if (!user.fcmToken) {
-            return res.status(400).json({
-                success: false,
-                message: 'User does not have an FCM token. They need to login to the app first.'
+            return res.status(200).json({
+                success: true,
+                message: 'Notification saved to history (User has no FCM token for push)'
             });
         }
 
@@ -74,22 +85,38 @@ const sendNotificationToAllUsers = async (req, res) => {
             });
         }
 
-        // Find all users with FCM tokens
-        const users = await User.find({ fcmToken: { $ne: null, $exists: true } });
+        // Find all users
+        const allUsers = await User.find({}, '_id fcmToken');
 
-        if (users.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No users have FCM tokens'
+        // Create notification records for ALL users
+        const notificationsToCreate = allUsers.map(user => ({
+            user: user._id,
+            title,
+            body,
+            data: data || {},
+            type: 'general'
+        }));
+
+        if (notificationsToCreate.length > 0) {
+            await Notification.insertMany(notificationsToCreate);
+        }
+
+        // Filter users with FCM tokens for push
+        const usersWithTokens = allUsers.filter(user => user.fcmToken);
+
+        if (usersWithTokens.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'Notifications saved to history (No users have FCM tokens for push)'
             });
         }
 
         // Send notification to all users
-        const result = await fcm.sendNotificationToAllUsers(users, title, body, data || {});
+        const result = await fcm.sendNotificationToAllUsers(usersWithTokens, title, body, data || {});
 
         res.status(200).json({
             success: true,
-            message: `Notification sent to ${result.successCount} out of ${result.usersWithTokens} users`,
+            message: `Notification sent to ${result.successCount} users (Saved for ${allUsers.length} users)`,
             data: result
         });
 
@@ -129,8 +156,106 @@ const getUsersWithFcmTokens = async (req, res) => {
     }
 };
 
+// @desc    Get current user's notifications
+// @route   GET /api/notifications
+// @access  Private
+const getUserNotifications = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const notifications = await Notification.find({ user: req.user._id })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Notification.countDocuments({ user: req.user._id });
+
+        res.status(200).json({
+            success: true,
+            count: notifications.length,
+            total,
+            page,
+            pages: Math.ceil(total / limit),
+            data: notifications
+        });
+
+    } catch (error) {
+        console.error('Get User Notifications Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch notifications',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Mark notification as read
+// @route   PUT /api/notifications/:id/read
+// @access  Private
+const markNotificationRead = async (req, res) => {
+    try {
+        const notification = await Notification.findOne({
+            _id: req.params.id,
+            user: req.user._id
+        });
+
+        if (!notification) {
+            return res.status(404).json({
+                success: false,
+                message: 'Notification not found'
+            });
+        }
+
+        notification.isRead = true;
+        await notification.save();
+
+        res.status(200).json({
+            success: true,
+            data: notification
+        });
+
+    } catch (error) {
+        console.error('Mark Notification Read Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update notification',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Mark ALL notifications as read
+// @route   PUT /api/notifications/read-all
+// @access  Private
+const markAllNotificationsRead = async (req, res) => {
+    try {
+        await Notification.updateMany(
+            { user: req.user._id, isRead: false },
+            { $set: { isRead: true } }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'All notifications marked as read'
+        });
+
+    } catch (error) {
+        console.error('Mark All Read Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update notifications',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     sendNotificationToUser,
     sendNotificationToAllUsers,
-    getUsersWithFcmTokens
+    getUsersWithFcmTokens,
+    getUserNotifications,
+    markNotificationRead,
+    markAllNotificationsRead
 };

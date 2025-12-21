@@ -59,6 +59,7 @@ const seasonalCategoryRoutes = require('./routes/seasonal-categories');
 const advertisementRoutes = require('./routes/advertisements');
 const adminRoutes = require('./routes/admin');
 const razorpayRoutes = require('./routes/razorpay');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -132,7 +133,7 @@ app.options('*', cors((req, callback) => {
 // Rate limiting - stricter for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max:1000, // limit each IP to 1000 requests per windowMs for auth routes
+  max: 1000, // limit each IP to 1000 requests per windowMs for auth routes
   message: {
     error: 'Too many authentication attempts, please try again later.'
   }
@@ -197,6 +198,7 @@ app.use('/api/seasonal-categories', seasonalCategoryRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/razorpay', razorpayRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);
