@@ -71,6 +71,10 @@ const userSchema = new mongoose.Schema({
       deviceId: { type: String },       // optional
       appVersion: { type: String }      // optional
     }
+  },
+  fcmToken: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true,
@@ -84,12 +88,12 @@ userSchema.index({ otp: 1, otpExpiresAt: 1 });
 userSchema.index({ lastActiveAt: 1 });
 
 // Virtual for checking if OTP is expired
-userSchema.virtual('isOtpExpired').get(function() {
+userSchema.virtual('isOtpExpired').get(function () {
   return this.otpExpiresAt ? this.otpExpiresAt < new Date() : true;
 });
 
 // Instance method to generate OTP
-userSchema.methods.generateOtp = function() {
+userSchema.methods.generateOtp = function () {
   // For testing purposes, always return "0000"
   // In production, this would generate a random 4-digit OTP
   this.otp = '0000';
@@ -98,7 +102,7 @@ userSchema.methods.generateOtp = function() {
 };
 
 // Instance method to verify OTP
-userSchema.methods.verifyOtp = function(enteredOtp) {
+userSchema.methods.verifyOtp = function (enteredOtp) {
   if (this.isOtpExpired) {
     return { valid: false, message: 'OTP has expired' };
   }
@@ -116,12 +120,12 @@ userSchema.methods.verifyOtp = function(enteredOtp) {
 };
 
 // Static method to find user by mobile for authentication
-userSchema.statics.findByMobile = function(mobile) {
+userSchema.statics.findByMobile = function (mobile) {
   return this.findOne({ mobile });
 };
 
 // Static method to create user if not exists
-userSchema.statics.findOrCreateByMobile = function(mobile) {
+userSchema.statics.findOrCreateByMobile = function (mobile) {
   return this.findOne({ mobile }).then(user => {
     if (user) {
       return user;
@@ -137,12 +141,12 @@ userSchema.statics.findOrCreateByMobile = function(mobile) {
 };
 
 // Generate simple session id (avoid extra dependency)
-userSchema.methods._newSessionId = function() {
+userSchema.methods._newSessionId = function () {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 };
 
 // Start a new session
-userSchema.methods.startSession = function(device) {
+userSchema.methods.startSession = function (device) {
   const now = new Date();
   const sessionId = this._newSessionId();
   this.currentSession = {
@@ -162,7 +166,7 @@ userSchema.methods.startSession = function(device) {
 
 // Touch activity and accumulate duration
 // capGapMs avoids adding huge gaps (e.g., app was backgrounded/offline)
-userSchema.methods.touchActivity = function(now = new Date(), capGapMs = 5 * 60 * 1000) {
+userSchema.methods.touchActivity = function (now = new Date(), capGapMs = 5 * 60 * 1000) {
   if (!this.currentSession?.lastSeenAt) {
     this.startSession();
     return;
@@ -176,7 +180,7 @@ userSchema.methods.touchActivity = function(now = new Date(), capGapMs = 5 * 60 
 };
 
 // Utility: whether user is considered active within a window (e.g., 10 minutes)
-userSchema.methods.isActiveWithin = function(windowMs = 10 * 60 * 1000) {
+userSchema.methods.isActiveWithin = function (windowMs = 10 * 60 * 1000) {
   if (!this.lastActiveAt) return false;
   return (Date.now() - new Date(this.lastActiveAt).getTime()) <= windowMs;
 };

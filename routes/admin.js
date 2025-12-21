@@ -9,6 +9,7 @@ const orderAdminRoutes = require('./admin/orders');
 const dashboardAdminRoutes = require('./admin/dashboard');
 const categoryAdminRoutes = require('./admin/categories');
 const contentAdminRoutes = require('./admin/content');
+const notificationAdminRoutes = require('./admin/notifications');
 
 // All admin routes require authentication and admin role
 router.use(protect);
@@ -21,5 +22,6 @@ router.use('/orders', orderAdminRoutes);
 router.use('/dashboard', dashboardAdminRoutes);
 router.use('/categories', categoryAdminRoutes);
 router.use('/content', contentAdminRoutes);
+router.use('/notifications', notificationAdminRoutes);
 
 module.exports = router;

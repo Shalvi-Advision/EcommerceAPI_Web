@@ -58,6 +58,14 @@ router.get('/overview', async (req, res) => {
       order_status: { $in: ['placed', 'confirmed', 'processing'] }
     });
 
+    const deliveredOrders = await Order.countDocuments({
+      order_status: 'delivered'
+    });
+
+    const refundedOrders = await Order.countDocuments({
+      order_status: 'refunded'
+    });
+
     // Revenue statistics
     const revenueStats = await Order.aggregate([
       {
@@ -155,6 +163,8 @@ router.get('/overview', async (req, res) => {
           thisMonth: ordersThisMonth,
           lastMonth: ordersLastMonth,
           pending: pendingOrders,
+          delivered: deliveredOrders,
+          refunded: refundedOrders,
           growth: parseFloat(orderGrowth)
         },
         revenue: {

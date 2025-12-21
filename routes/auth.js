@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { sendOtp, verifyOtp, getProfile, updateProfile, logout, isActive } = require('../controllers/auth');
+const { sendOtp, verifyOtp, getProfile, updateProfile, logout, isActive, saveFcmToken } = require('../controllers/auth');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -71,5 +71,10 @@ router.post('/logout', protect, logout);
 // @desc    Update user session/activity and report status
 // @access  Private
 router.post('/is-active', protect, isActive);
+
+// @route   POST /api/auth/save-fcm-token
+// @desc    Save FCM token for push notifications
+// @access  Private
+router.post('/save-fcm-token', protect, saveFcmToken);
 
 module.exports = router;
