@@ -1,17 +1,17 @@
 const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/auth');
 const {
     getUserNotifications,
+    getUnreadCount,
     markNotificationRead,
     markAllNotificationsRead
 } = require('../controllers/notifications');
-const { protect } = require('../middleware/auth');
 
-const router = express.Router();
-
-router.use(protect); // All routes require authentication
-
-router.get('/', getUserNotifications);
-router.put('/:id/read', markNotificationRead);
-router.put('/read-all', markAllNotificationsRead);
+// User notification routes (all protected)
+router.get('/', protect, getUserNotifications);
+router.get('/unread-count', protect, getUnreadCount); // Optimized endpoint for count only
+router.put('/:id/read', protect, markNotificationRead);
+router.put('/read-all', protect, markAllNotificationsRead);
 
 module.exports = router;

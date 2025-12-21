@@ -85,10 +85,10 @@ const sendNotificationToAllUsers = async (req, res) => {
             });
         }
 
-        // Find all users
-        const allUsers = await User.find({}, '_id fcmToken');
+        // Find all users (only need IDs and FCM tokens)
+        const allUsers = await User.find({}, '_id fcmToken').lean();
 
-        // Create notification records for ALL users
+        // Create notification records for ALL users in bulk (optimized)
         const notificationsToCreate = allUsers.map(user => ({
             user: user._id,
             title,
@@ -138,7 +138,7 @@ const getUsersWithFcmTokens = async (req, res) => {
         const users = await User.find(
             { fcmToken: { $ne: null, $exists: true } },
             { _id: 1, name: 1, mobile: 1, email: 1, lastActiveAt: 1 }
-        ).sort({ lastActiveAt: -1 });
+        ).sort({ lastActiveAt: -1 }).lean();
 
         res.status(200).json({
             success: true,
@@ -168,7 +168,8 @@ const getUserNotifications = async (req, res) => {
         const notifications = await Notification.find({ user: req.user._id })
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit);
+            .limit(limit)
+            .lean(); // Add lean() for better performance
 
         const total = await Notification.countDocuments({ user: req.user._id });
 
@@ -191,15 +192,41 @@ const getUserNotifications = async (req, res) => {
     }
 };
 
+// @desc    Get unread notification count for current user (optimized endpoint)
+// @route   GET /api/notifications/unread-count
+// @access  Private
+const getUnreadCount = async (req, res) => {
+    try {
+        const count = await Notification.countDocuments({
+            user: req.user._id,
+            isRead: false
+        });
+
+        res.status(200).json({
+            success: true,
+            count
+        });
+
+    } catch (error) {
+        console.error('Get Unread Count Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch unread count',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Mark notification as read
 // @route   PUT /api/notifications/:id/read
 // @access  Private
 const markNotificationRead = async (req, res) => {
     try {
-        const notification = await Notification.findOne({
-            _id: req.params.id,
-            user: req.user._id
-        });
+        const notification = await Notification.findOneAndUpdate(
+            { _id: req.params.id, user: req.user._id },
+            { isRead: true },
+            { new: true, lean: true }
+        );
 
         if (!notification) {
             return res.status(404).json({
@@ -207,9 +234,6 @@ const markNotificationRead = async (req, res) => {
                 message: 'Notification not found'
             });
         }
-
-        notification.isRead = true;
-        await notification.save();
 
         res.status(200).json({
             success: true,
@@ -256,6 +280,7 @@ module.exports = {
     sendNotificationToAllUsers,
     getUsersWithFcmTokens,
     getUserNotifications,
+    getUnreadCount,
     markNotificationRead,
     markAllNotificationsRead
 };
