@@ -147,3 +147,4 @@ postman/
 # Test results
 test-results/
 junit.xml
+serviceAccountKey.json
