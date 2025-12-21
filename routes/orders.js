@@ -169,6 +169,18 @@ router.post('/place-order', protect, async (req, res, next) => {
     const discountAmount = 0; // Could be calculated based on coupons/promotions
     const totalAmount = subtotal + deliveryCharges + taxAmount - discountAmount;
 
+    // Determine payment status based on payment method
+    // If payment_details contains razorpay payment info, it's an online paid order
+    // Otherwise it's POD with pending payment
+    const isOnlinePayment = payment_details && (
+      payment_details.razorpay_payment_id ||
+      payment_details.payment_status === 'completed' ||
+      payment_details.method === 'online_payment'
+    );
+
+    const paymentStatus = isOnlinePayment ? 'completed' : 'pending';
+    const transactionId = payment_details?.razorpay_payment_id || payment_details?.transaction_id || '';
+
     // Create order
     const order = new Order({
       order_number: orderNumber,
@@ -201,6 +213,8 @@ router.post('/place-order', protect, async (req, res, next) => {
       payment_info: {
         payment_mode_id: paymentMode.idpayment_mode,
         payment_mode_name: paymentMode.payment_mode_name,
+        payment_status: paymentStatus,
+        transaction_id: transactionId,
         payment_details: payment_details || {}
       },
       order_summary: {
