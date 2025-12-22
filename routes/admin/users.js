@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const User = require('../../models/User');
 const Order = require('../../models/Order');
+const Notification = require('../../models/Notification');
 
 // @route   GET /api/admin/users
-// @desc    Get all users with pagination, search, and filters
+// @desc    Get all users with pagination, search, and filters (with notification insights)
 // @access  Admin
 router.get('/', async (req, res) => {
   try {
@@ -44,14 +45,46 @@ router.get('/', async (req, res) => {
       .select('-otp -otpExpiresAt')
       .sort(sort)
       .limit(parseInt(limit))
-      .skip(skip);
+      .skip(skip)
+      .lean();
 
     // Get total count for pagination
     const total = await User.countDocuments(query);
 
+    // Aggregate notification counts for all users in this page
+    const userIds = users.map(u => u._id);
+    const notificationStats = await Notification.aggregate([
+      { $match: { user: { $in: userIds } } },
+      {
+        $group: {
+          _id: '$user',
+          totalCount: { $sum: 1 },
+          unreadCount: { $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    // Create a map for quick lookup
+    const notifMap = {};
+    notificationStats.forEach(stat => {
+      notifMap[stat._id.toString()] = {
+        totalCount: stat.totalCount,
+        unreadCount: stat.unreadCount
+      };
+    });
+
+    // Enhance users with notification data
+    const enhancedUsers = users.map(user => ({
+      ...user,
+      pushEnabled: !!user.fcmToken,
+      platform: user.currentSession?.device?.platform || null,
+      notificationCount: notifMap[user._id.toString()]?.totalCount || 0,
+      unreadNotificationCount: notifMap[user._id.toString()]?.unreadCount || 0
+    }));
+
     res.status(200).json({
       success: true,
-      data: users,
+      data: enhancedUsers,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
