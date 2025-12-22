@@ -6,6 +6,7 @@ const AddressBook = require('../models/AddressBook');
 const DeliverySlot = require('../models/DeliverySlot');
 const PaymentMode = require('../models/PaymentMode');
 const { protect } = require('../middleware/auth');
+const { createOrderPlacedNotification } = require('../utils/notificationService');
 
 /**
  * @route   POST /api/orders/place-order
@@ -235,6 +236,15 @@ router.post('/place-order', protect, async (req, res, next) => {
 
     // Clear cart after successful order placement
     await Cart.clearCart(userMobile);
+
+    // Create in-app notification for the user (API-based, no Firebase)
+    if (req.user && req.user._id) {
+      createOrderPlacedNotification(
+        req.user._id,
+        savedOrder.order_number,
+        savedOrder.order_summary.total_amount
+      );
+    }
 
     res.status(201).json({
       success: true,

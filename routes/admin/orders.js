@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../../models/Order');
+const User = require('../../models/User');
+const { createOrderStatusNotification, createPaymentStatusNotification } = require('../../utils/notificationService');
 
 // @route   GET /api/admin/orders
 // @desc    Get all orders with filtering and pagination
@@ -142,6 +144,14 @@ router.patch('/:id/status', async (req, res) => {
     // Use the instance method to update status
     await order.updateStatus(status);
 
+    // Create in-app notification for the user (API-based, no Firebase)
+    if (order.mobile_no) {
+      const user = await User.findOne({ mobile: order.mobile_no });
+      if (user) {
+        createOrderStatusNotification(user._id, order.order_number, status);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: `Order status updated to ${status} successfully`,
@@ -192,6 +202,14 @@ router.patch('/:id/payment-status', async (req, res) => {
         success: false,
         message: 'Order not found'
       });
+    }
+
+    // Create in-app notification for the user (API-based, no Firebase)
+    if (order.mobile_no) {
+      const user = await User.findOne({ mobile: order.mobile_no });
+      if (user) {
+        createPaymentStatusNotification(user._id, order.order_number, paymentStatus);
+      }
     }
 
     res.status(200).json({
