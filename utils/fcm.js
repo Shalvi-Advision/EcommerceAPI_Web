@@ -48,13 +48,42 @@ const sendNotification = async (fcmToken, title, body, data = {}) => {
         throw new Error('FCM token is required');
     }
 
+    // Ensure all data values are strings (FCM requirement for iOS)
+    const stringifiedData = {};
+    Object.keys(data).forEach(key => {
+        const value = data[key];
+        stringifiedData[key] = typeof value === 'string' ? value : JSON.stringify(value);
+    });
+
     const message = {
         notification: {
             title: title || 'Notification',
             body: body || ''
         },
-        data: data,
-        token: fcmToken
+        data: stringifiedData,
+        token: fcmToken,
+        // iOS specific configuration
+        apns: {
+            payload: {
+                aps: {
+                    alert: {
+                        title: title || 'Notification',
+                        body: body || ''
+                    },
+                    sound: 'default',
+                    badge: 1
+                }
+            }
+        },
+        // Android specific configuration
+        android: {
+            notification: {
+                title: title || 'Notification',
+                body: body || '',
+                sound: 'default',
+                priority: 'high'
+            }
+        }
     };
 
     try {
@@ -107,13 +136,42 @@ const sendNotificationToMultipleUsers = async (users, title, body, data = {}) =>
 
     const tokens = usersWithTokens.map(user => user.fcmToken);
 
+    // Ensure all data values are strings (FCM requirement for iOS)
+    const stringifiedData = {};
+    Object.keys(data).forEach(key => {
+        const value = data[key];
+        stringifiedData[key] = typeof value === 'string' ? value : JSON.stringify(value);
+    });
+
     const message = {
         notification: {
             title: title || 'Notification',
             body: body || ''
         },
-        data: data,
-        tokens: tokens
+        data: stringifiedData,
+        tokens: tokens,
+        // iOS specific configuration
+        apns: {
+            payload: {
+                aps: {
+                    alert: {
+                        title: title || 'Notification',
+                        body: body || ''
+                    },
+                    sound: 'default',
+                    badge: 1
+                }
+            }
+        },
+        // Android specific configuration
+        android: {
+            notification: {
+                title: title || 'Notification',
+                body: body || '',
+                sound: 'default',
+                priority: 'high'
+            }
+        }
     };
 
     try {
