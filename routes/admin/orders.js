@@ -146,10 +146,16 @@ router.patch('/:id/status', async (req, res) => {
 
     // Create in-app notification for the user (API-based, no Firebase)
     if (order.mobile_no) {
+      console.log(`📋 Looking up user for mobile: ${order.mobile_no}`);
       const user = await User.findOne({ mobile: order.mobile_no });
       if (user) {
+        console.log(`✅ User found: ${user._id}, creating notification...`);
         createOrderStatusNotification(user._id, order.order_number, status);
+      } else {
+        console.log(`⚠️ No user found for mobile: ${order.mobile_no}`);
       }
+    } else {
+      console.log(`⚠️ Order has no mobile_no: ${order.order_number}`);
     }
 
     res.status(200).json({
