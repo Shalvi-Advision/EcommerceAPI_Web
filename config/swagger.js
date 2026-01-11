@@ -20,10 +20,6 @@ const options = {
             {
                 url: 'http://localhost:5001',
                 description: 'Development server'
-            },
-            {
-                url: 'https://api.patelecommerce.com',
-                description: 'Production server'
             }
         ],
         components: {
