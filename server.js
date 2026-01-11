@@ -11,6 +11,10 @@ const { connectDB } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 
+// Swagger imports
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
 // Import models to register them with Mongoose
 require('./models/User');
 require('./models/Address');
@@ -172,6 +176,18 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Patel E-commerce API Docs'
+}));
+
+// Swagger JSON endpoint
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // API routes
 app.use('/api/auth', authLimiter, authRoutes); // Apply stricter rate limiting to auth routes
 app.use('/api/products', productRoutes);
@@ -215,6 +231,7 @@ const startServer = async () => {
 📍 Running on: http://localhost:${PORT}
 🌍 Environment: ${process.env.NODE_ENV || 'development'}
 📊 Health check: http://localhost:${PORT}/health
+📚 API Documentation: http://localhost:${PORT}/api-docs
 🔗 Database: Connected to MongoDB Atlas
 🔐 Authentication: OTP-based with JWT tokens
 ⚡ Ready to handle requests!
