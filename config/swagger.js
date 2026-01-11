@@ -4,9 +4,9 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Patel E-commerce API Documentation',
+            title: 'Ecommerce Backend API Documentation',
             version: '1.0.0',
-            description: 'Complete API documentation for Patel E-commerce platform including authentication, products, cart, orders, and admin endpoints',
+            description: 'Complete API documentation for E-commerce platform including authentication, products, cart, orders, and admin endpoints',
             contact: {
                 name: 'Gaurav Pawar',
                 email: 'support@patelecommerce.com'
