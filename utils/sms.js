@@ -6,7 +6,7 @@ const SMS_CONFIG = {
     userId: process.env.SMS_USER_ID || 'shalviadvision',
     password: process.env.SMS_PASSWORD || 'Pall@vi1985',
     senderId: process.env.SMS_SENDER_ID || 'SHALVI',
-    clientName: process.env.SMS_CLIENT_NAME || 'Pagariya Ecom', // Based on usage in PHP: "Dear SHALVI Customer..."
+    clientName: process.env.SMS_CLIENT_NAME || 'Grahak Peth',
     defaultOtp: process.env.SMS_DEFAULT_OTP || '2786' // Backdoor OTP from PHP script
 };
 

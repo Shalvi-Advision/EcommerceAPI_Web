@@ -14,6 +14,15 @@ router.post('/', async (req, res) => {
     // If store_code is provided, filter by store
     if (store_code) {
       const storeCodes = Array.isArray(store_code) ? store_code : [store_code];
+
+      // Debug: check dates
+      const now = new Date();
+      const doc = await Banner.findOne({ section_name, store_codes: { $in: storeCodes } }).lean();
+      if (doc) {
+        console.log(`[Banner Debug] now: ${now.toISOString()}, start_date: ${doc.start_date}, end_date: ${doc.end_date}`);
+        console.log(`[Banner Debug] start_date <= now? ${doc.start_date <= now}, end_date >= now? ${doc.end_date >= now}`);
+      }
+
       banners = await Banner.findByStoreCodes({
         storeCodes,
         sectionName: section_name,
