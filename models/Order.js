@@ -70,7 +70,7 @@ const deliveryInfoSchema = new mongoose.Schema({
     },
     email_id: {
       type: String,
-      required: [true, 'Delivery email is required']
+      default: ''
     },
     line_1: {
       type: String,
