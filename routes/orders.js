@@ -39,7 +39,9 @@ router.post('/place-order', protect, async (req, res, next) => {
       address_id,
       payment_mode_id,
       order_notes,
-      payment_details
+      payment_details,
+      delivery_charges: clientDeliveryCharges,
+      delivery_distance
     } = req.body;
 
     // Validate required fields
@@ -165,7 +167,7 @@ router.post('/place-order', protect, async (req, res, next) => {
 
     // Calculate order totals
     const subtotal = cart.subtotal;
-    const deliveryCharges = 0; // Could be calculated based on distance/area
+    const deliveryCharges = Math.max(0, parseFloat(clientDeliveryCharges) || 0);
     const taxAmount = Math.round(subtotal * 0.18); // 18% GST (example)
     const discountAmount = 0; // Could be calculated based on coupons/promotions
     const totalAmount = subtotal + deliveryCharges + taxAmount - discountAmount;
@@ -221,6 +223,7 @@ router.post('/place-order', protect, async (req, res, next) => {
       order_summary: {
         subtotal: subtotal,
         delivery_charges: deliveryCharges,
+        delivery_distance_km: parseFloat(delivery_distance) || 0,
         tax_amount: taxAmount,
         discount_amount: discountAmount,
         total_amount: totalAmount,

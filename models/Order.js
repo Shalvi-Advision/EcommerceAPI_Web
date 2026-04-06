@@ -174,6 +174,10 @@ const orderSchema = new mongoose.Schema({
       default: 0,
       min: [0, 'Delivery charges cannot be negative']
     },
+    delivery_distance_km: {
+      type: Number,
+      default: 0
+    },
     tax_amount: {
       type: Number,
       default: 0,
