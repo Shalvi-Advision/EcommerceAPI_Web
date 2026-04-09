@@ -4,9 +4,11 @@ const { connectDB, disconnectDB } = require('./config/database');
 const User = require('./models/User');
 
 const adminNumbers = [
-    '+91 76664 75554',
+    '+91 98903 54858',
     '+91 97734 43190',
-    '+91 8108053372'
+    '+91 98810 27738',
+    '+91 76664 75554',
+    '+91 81080 53372'
 ];
 
 const createAdminUsers = async () => {
