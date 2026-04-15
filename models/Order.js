@@ -202,6 +202,27 @@ const orderSchema = new mongoose.Schema({
       type: Number,
       required: [true, 'Total quantity is required'],
       min: [0, 'Total quantity cannot be negative']
+    },
+    applied_offer: {
+      offer_id: { type: String },
+      title: { type: String },
+      discount_type: { type: String },
+      discount_amount: { type: Number }
+    },
+    deal_items_applied: [{
+      offer_id: { type: String },
+      offer_title: { type: String },
+      p_code: { type: String },
+      product_name: { type: String },
+      deal_price: { type: Number },
+      original_price: { type: Number },
+      quantity: { type: Number },
+      savings: { type: Number }
+    }],
+    deal_savings: {
+      type: Number,
+      default: 0,
+      min: [0, 'Deal savings cannot be negative']
     }
   },
   order_notes: {

@@ -1,11 +1,15 @@
 require('dotenv').config();
 
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
 
 const { connectDB } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
@@ -65,6 +69,7 @@ const deliveryChargesRoutes = require('./routes/deliveryCharges');
 const adminRoutes = require('./routes/admin');
 const razorpayRoutes = require('./routes/razorpay');
 const notificationRoutes = require('./routes/notifications');
+const offerRoutes = require('./routes/offers');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -167,6 +172,9 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+// Suppress favicon requests
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -214,6 +222,7 @@ app.use('/api/popular-categories', popularCategoryRoutes);
 app.use('/api/seasonal-categories', seasonalCategoryRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/delivery-charges', deliveryChargesRoutes);
+app.use('/api/offers', offerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/razorpay', razorpayRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -227,7 +236,47 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    // Create HTTP server and attach Socket.io
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      cors: {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST']
+      }
+    });
+
+    // Make io accessible to routes via req.app.get('io')
+    app.set('io', io);
+
+    // Socket.io auth middleware — only allow admin connections
+    io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth?.token;
+        if (!token) return next(new Error('No token'));
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const user = await User.findById(decoded.id).select('role name mobile');
+        if (!user || user.role !== 'admin') return next(new Error('Not admin'));
+
+        socket.user = user;
+        next();
+      } catch (err) {
+        next(new Error('Auth failed'));
+      }
+    });
+
+    io.on('connection', (socket) => {
+      // Join admin room for broadcast notifications
+      socket.join('admins');
+      console.log(`🔌 Admin connected: ${socket.user?.name || socket.user?.mobile}`);
+
+      socket.on('disconnect', () => {
+        console.log(`🔌 Admin disconnected: ${socket.user?.name || socket.user?.mobile}`);
+      });
+    });
+
+    server.listen(PORT, () => {
       console.log(`
 🚀 Patel E-commerce API Server Started!
 📍 Running on: http://localhost:${PORT}
@@ -236,14 +285,8 @@ const startServer = async () => {
 📚 API Documentation: http://localhost:${PORT}/api-docs
 🔗 Database: Connected to MongoDB Atlas
 🔐 Authentication: OTP-based with JWT tokens
+🔌 WebSocket: Socket.io ready for real-time notifications
 ⚡ Ready to handle requests!
-
-📱 Authentication Endpoints:
-   POST /api/auth/send-otp - Send OTP to mobile
-   POST /api/auth/verify-otp - Verify OTP and get token
-   GET  /api/auth/profile - Get user profile (protected)
-   PUT  /api/auth/profile - Update user profile (protected)
-   POST /api/auth/is-active - Update user activity (protected)
       `);
     });
   } catch (error) {

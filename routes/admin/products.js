@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../../models/Product');
 const ProductMaster = require('../../models/ProductMaster');
+const { checkPermission } = require('../../middleware/checkPermission');
+
+const viewPerm = checkPermission('ecommerce', 'view');
+const createPerm = checkPermission('ecommerce', 'create');
+const editPerm = checkPermission('ecommerce', 'edit');
+const deletePerm = checkPermission('ecommerce', 'delete');
 
 // @route   GET /api/admin/products
 // @desc    Get all products with advanced filtering and pagination
 // @access  Admin
-router.get('/', async (req, res) => {
+router.get('/', viewPerm, async (req, res) => {
   try {
     const {
       page = 1,
@@ -101,7 +107,7 @@ router.get('/', async (req, res) => {
 // @route   POST /api/admin/products/by-store
 // @desc    Get products by store_code with search and filters (using ProductMaster)
 // @access  Admin
-router.post('/by-store', async (req, res) => {
+router.post('/by-store', viewPerm, async (req, res) => {
   try {
     const {
       store_code,
@@ -206,7 +212,7 @@ router.post('/by-store', async (req, res) => {
 // @route   GET /api/admin/products/:id
 // @desc    Get single product by ID
 // @access  Admin
-router.get('/:id', async (req, res) => {
+router.get('/:id', viewPerm, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate('category', 'name')
@@ -241,7 +247,7 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/admin/products
 // @desc    Create new product
 // @access  Admin
-router.post('/', async (req, res) => {
+router.post('/', createPerm, async (req, res) => {
   try {
     const productData = {
       ...req.body,
@@ -278,7 +284,7 @@ router.post('/', async (req, res) => {
 // @route   PUT /api/admin/products/:id
 // @desc    Update product
 // @access  Admin
-router.put('/:id', async (req, res) => {
+router.put('/:id', editPerm, async (req, res) => {
   try {
     const updateData = {
       ...req.body,
@@ -318,7 +324,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/admin/products/:id
 // @desc    Delete product
 // @access  Admin
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', deletePerm, async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
 
@@ -346,7 +352,7 @@ router.delete('/:id', async (req, res) => {
 // @route   PATCH /api/admin/products/:id/stock
 // @desc    Update product stock
 // @access  Admin
-router.patch('/:id/stock', async (req, res) => {
+router.patch('/:id/stock', editPerm, async (req, res) => {
   try {
     const { quantity, operation = 'set' } = req.body;
 
@@ -408,7 +414,7 @@ router.patch('/:id/stock', async (req, res) => {
 // @route   PATCH /api/admin/products/:id/status
 // @desc    Update product status
 // @access  Admin
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', editPerm, async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -451,7 +457,7 @@ router.patch('/:id/status', async (req, res) => {
 // @route   PATCH /api/admin/products/:id/price
 // @desc    Update product pricing
 // @access  Admin
-router.patch('/:id/price', async (req, res) => {
+router.patch('/:id/price', editPerm, async (req, res) => {
   try {
     const { mrp, sellingPrice, discount } = req.body;
 
@@ -504,7 +510,7 @@ router.patch('/:id/price', async (req, res) => {
 // @route   GET /api/admin/products/stats/overview
 // @desc    Get product statistics overview
 // @access  Admin
-router.get('/stats/overview', async (req, res) => {
+router.get('/stats/overview', viewPerm, async (req, res) => {
   try {
     const totalProducts = await Product.countDocuments();
     const activeProducts = await Product.countDocuments({ status: 'active' });
@@ -555,7 +561,7 @@ router.get('/stats/overview', async (req, res) => {
 // @route   POST /api/admin/products/bulk-update-status
 // @desc    Bulk update product status
 // @access  Admin
-router.post('/bulk-update-status', async (req, res) => {
+router.post('/bulk-update-status', editPerm, async (req, res) => {
   try {
     const { productIds, status } = req.body;
 
@@ -592,6 +598,99 @@ router.post('/bulk-update-status', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error in bulk update',
+      error: error.message
+    });
+  }
+});
+
+// ==================== PRODUCT MASTER CRUD ====================
+
+// @route   POST /api/admin/products/master
+// @desc    Create new ProductMaster entry
+// @access  Admin (ecommerce:create)
+router.post('/master', createPerm, async (req, res) => {
+  try {
+    const product = await ProductMaster.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: product
+    });
+  } catch (error) {
+    console.error('Create ProductMaster error:', error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product with this code already exists'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error creating product',
+      error: error.message
+    });
+  }
+});
+
+// @route   PUT /api/admin/products/master/:id
+// @desc    Update ProductMaster entry
+// @access  Admin (ecommerce:edit)
+router.put('/master/:id', editPerm, async (req, res) => {
+  try {
+    const product = await ProductMaster.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Product updated successfully',
+      data: product
+    });
+  } catch (error) {
+    console.error('Update ProductMaster error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating product',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/admin/products/master/:id
+// @desc    Delete ProductMaster entry
+// @access  Admin (ecommerce:delete)
+router.delete('/master/:id', deletePerm, async (req, res) => {
+  try {
+    const product = await ProductMaster.findByIdAndDelete(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete ProductMaster error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting product',
       error: error.message
     });
   }

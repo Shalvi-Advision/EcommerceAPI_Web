@@ -3,13 +3,20 @@ const router = express.Router();
 const Category = require('../../models/Category');
 const Department = require('../../models/Department');
 const Subcategory = require('../../models/Subcategory');
+const { checkPermission } = require('../../middleware/checkPermission');
+
+// All routes in this file fall under the 'ecommerce' permission section
+const viewPerm = checkPermission('ecommerce', 'view');
+const createPerm = checkPermission('ecommerce', 'create');
+const editPerm = checkPermission('ecommerce', 'edit');
+const deletePerm = checkPermission('ecommerce', 'delete');
 
 // ==================== CATEGORY MANAGEMENT ====================
 
 // @route   GET /api/admin/categories
 // @desc    Get all categories with pagination and filters
 // @access  Admin
-router.get('/', async (req, res) => {
+router.get('/', viewPerm, async (req, res) => {
   try {
     const {
       page = 1,
@@ -73,7 +80,7 @@ router.get('/', async (req, res) => {
 // @route   POST /api/admin/categories/by-store
 // @desc    Get categories by store_code with filters
 // @access  Admin
-router.post('/by-store', async (req, res) => {
+router.post('/by-store', viewPerm, async (req, res) => {
   try {
     const {
       store_code,
@@ -143,7 +150,7 @@ router.post('/by-store', async (req, res) => {
 // @route   GET /api/admin/categories/:id
 // @desc    Get single category by ID
 // @access  Admin
-router.get('/:id', async (req, res) => {
+router.get('/:id', viewPerm, async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
 
@@ -171,7 +178,7 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/admin/categories
 // @desc    Create new category
 // @access  Admin
-router.post('/', async (req, res) => {
+router.post('/', createPerm, async (req, res) => {
   try {
     const category = await Category.create(req.body);
 
@@ -193,7 +200,7 @@ router.post('/', async (req, res) => {
 // @route   PUT /api/admin/categories/:id
 // @desc    Update category
 // @access  Admin
-router.put('/:id', async (req, res) => {
+router.put('/:id', editPerm, async (req, res) => {
   try {
     const category = await Category.findByIdAndUpdate(
       req.params.id,
@@ -226,7 +233,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/admin/categories/:id
 // @desc    Delete category
 // @access  Admin
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', deletePerm, async (req, res) => {
   try {
     const category = await Category.findByIdAndDelete(req.params.id);
 
@@ -256,7 +263,7 @@ router.delete('/:id', async (req, res) => {
 // @route   GET /api/admin/categories/departments/all
 // @desc    Get all departments with pagination and filters
 // @access  Admin
-router.get('/departments/all', async (req, res) => {
+router.get('/departments/all', viewPerm, async (req, res) => {
   try {
     const {
       page = 1,
@@ -320,7 +327,7 @@ router.get('/departments/all', async (req, res) => {
 // @route   GET /api/admin/categories/departments/:id
 // @desc    Get single department by ID
 // @access  Admin
-router.get('/departments/:id', async (req, res) => {
+router.get('/departments/:id', viewPerm, async (req, res) => {
   try {
     const department = await Department.findById(req.params.id);
 
@@ -348,7 +355,7 @@ router.get('/departments/:id', async (req, res) => {
 // @route   POST /api/admin/categories/departments
 // @desc    Create new department
 // @access  Admin
-router.post('/departments', async (req, res) => {
+router.post('/departments', createPerm, async (req, res) => {
   try {
     const department = await Department.create(req.body);
 
@@ -370,7 +377,7 @@ router.post('/departments', async (req, res) => {
 // @route   PUT /api/admin/categories/departments/:id
 // @desc    Update department
 // @access  Admin
-router.put('/departments/:id', async (req, res) => {
+router.put('/departments/:id', editPerm, async (req, res) => {
   try {
     const department = await Department.findByIdAndUpdate(
       req.params.id,
@@ -403,7 +410,7 @@ router.put('/departments/:id', async (req, res) => {
 // @route   DELETE /api/admin/categories/departments/:id
 // @desc    Delete department
 // @access  Admin
-router.delete('/departments/:id', async (req, res) => {
+router.delete('/departments/:id', deletePerm, async (req, res) => {
   try {
     const department = await Department.findByIdAndDelete(req.params.id);
 
@@ -431,7 +438,7 @@ router.delete('/departments/:id', async (req, res) => {
 // @route   POST /api/admin/categories/departments/by-store
 // @desc    Get departments by store_code with filters
 // @access  Admin
-router.post('/departments/by-store', async (req, res) => {
+router.post('/departments/by-store', viewPerm, async (req, res) => {
   try {
     const {
       store_code,
@@ -508,7 +515,7 @@ router.post('/departments/by-store', async (req, res) => {
 // @route   GET /api/admin/categories/subcategories/all
 // @desc    Get all subcategories with pagination and filters
 // @access  Admin
-router.get('/subcategories/all', async (req, res) => {
+router.get('/subcategories/all', viewPerm, async (req, res) => {
   try {
     const {
       page = 1,
@@ -567,7 +574,7 @@ router.get('/subcategories/all', async (req, res) => {
 // @route   POST /api/admin/categories/subcategories/by-store
 // @desc    Get subcategories by store_code with filters
 // @access  Admin
-router.post('/subcategories/by-store', async (req, res) => {
+router.post('/subcategories/by-store', viewPerm, async (req, res) => {
   try {
     const {
       store_code,
@@ -657,7 +664,7 @@ router.post('/subcategories/by-store', async (req, res) => {
 // @route   POST /api/admin/categories/subcategories
 // @desc    Create new subcategory
 // @access  Admin
-router.post('/subcategories', async (req, res) => {
+router.post('/subcategories', createPerm, async (req, res) => {
   try {
     const subcategory = await Subcategory.create(req.body);
 
@@ -679,7 +686,7 @@ router.post('/subcategories', async (req, res) => {
 // @route   PUT /api/admin/categories/subcategories/:id
 // @desc    Update subcategory
 // @access  Admin
-router.put('/subcategories/:id', async (req, res) => {
+router.put('/subcategories/:id', editPerm, async (req, res) => {
   try {
     const subcategory = await Subcategory.findByIdAndUpdate(
       req.params.id,
@@ -712,7 +719,7 @@ router.put('/subcategories/:id', async (req, res) => {
 // @route   DELETE /api/admin/categories/subcategories/:id
 // @desc    Delete subcategory
 // @access  Admin
-router.delete('/subcategories/:id', async (req, res) => {
+router.delete('/subcategories/:id', deletePerm, async (req, res) => {
   try {
     const subcategory = await Subcategory.findByIdAndDelete(req.params.id);
 

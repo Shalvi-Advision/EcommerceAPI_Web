@@ -4,6 +4,10 @@ const User = require('../../models/User');
 const Product = require('../../models/Product');
 const Order = require('../../models/Order');
 const Category = require('../../models/Category');
+const { checkPermission } = require('../../middleware/checkPermission');
+
+// All dashboard routes require dashboard:view permission
+router.use(checkPermission('dashboard', 'view'));
 
 // @route   GET /api/admin/dashboard/overview
 // @desc    Get overall dashboard statistics

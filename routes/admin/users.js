@@ -3,11 +3,12 @@ const router = express.Router();
 const User = require('../../models/User');
 const Order = require('../../models/Order');
 const Notification = require('../../models/Notification');
+const { checkPermission } = require('../../middleware/checkPermission');
 
 // @route   GET /api/admin/users
 // @desc    Get all users with pagination, search, and filters (with notification insights)
 // @access  Admin
-router.get('/', async (req, res) => {
+router.get('/', checkPermission('users', 'view'), async (req, res) => {
   try {
     const {
       page = 1,
@@ -105,7 +106,7 @@ router.get('/', async (req, res) => {
 // @route   GET /api/admin/users/:id
 // @desc    Get single user by ID with detailed information
 // @access  Admin
-router.get('/:id', async (req, res) => {
+router.get('/:id', checkPermission('users', 'view'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
       .select('-otp -otpExpiresAt')
@@ -162,7 +163,7 @@ router.get('/:id', async (req, res) => {
 // @route   PUT /api/admin/users/:id
 // @desc    Update user details
 // @access  Admin
-router.put('/:id', async (req, res) => {
+router.put('/:id', checkPermission('users', 'edit'), async (req, res) => {
   try {
     const { name, email, mobile, role, isVerified } = req.body;
 
@@ -204,7 +205,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/admin/users/:id
 // @desc    Delete user (soft delete by deactivating)
 // @access  Admin
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkPermission('users', 'delete'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 
@@ -248,7 +249,7 @@ router.delete('/:id', async (req, res) => {
 // @route   PATCH /api/admin/users/:id/role
 // @desc    Change user role
 // @access  Admin
-router.patch('/:id/role', async (req, res) => {
+router.patch('/:id/role', checkPermission('users', 'edit'), async (req, res) => {
   try {
     const { role } = req.body;
 
@@ -290,7 +291,7 @@ router.patch('/:id/role', async (req, res) => {
 // @route   GET /api/admin/users/stats/overview
 // @desc    Get user statistics overview
 // @access  Admin
-router.get('/stats/overview', async (req, res) => {
+router.get('/stats/overview', checkPermission('users', 'view'), async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const verifiedUsers = await User.countDocuments({ isVerified: true });

@@ -3,11 +3,12 @@ const router = express.Router();
 const Order = require('../../models/Order');
 const User = require('../../models/User');
 const { createOrderStatusNotification, createPaymentStatusNotification } = require('../../utils/notificationService');
+const { checkPermission } = require('../../middleware/checkPermission');
 
 // @route   GET /api/admin/orders
 // @desc    Get all orders with filtering and pagination
 // @access  Admin
-router.get('/', async (req, res) => {
+router.get('/', checkPermission('orders', 'view'), async (req, res) => {
   try {
     const {
       page = 1,
@@ -92,7 +93,7 @@ router.get('/', async (req, res) => {
 // @route   GET /api/admin/orders/:id
 // @desc    Get single order by ID
 // @access  Admin
-router.get('/:id', async (req, res) => {
+router.get('/:id', checkPermission('orders', 'view'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
 
@@ -120,7 +121,7 @@ router.get('/:id', async (req, res) => {
 // @route   PATCH /api/admin/orders/:id/status
 // @desc    Update order status
 // @access  Admin
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -176,7 +177,7 @@ router.patch('/:id/status', async (req, res) => {
 // @route   PATCH /api/admin/orders/:id/payment-status
 // @desc    Update payment status
 // @access  Admin
-router.patch('/:id/payment-status', async (req, res) => {
+router.patch('/:id/payment-status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
     const { paymentStatus, transactionId } = req.body;
 
@@ -236,7 +237,7 @@ router.patch('/:id/payment-status', async (req, res) => {
 // @route   PUT /api/admin/orders/:id
 // @desc    Update order details
 // @access  Admin
-router.put('/:id', async (req, res) => {
+router.put('/:id', checkPermission('orders', 'edit'), async (req, res) => {
   try {
     const updateData = {
       ...req.body,
@@ -274,7 +275,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/admin/orders/:id
 // @desc    Delete order (only if not processed)
 // @access  Admin
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkPermission('orders', 'delete'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
 
@@ -312,7 +313,7 @@ router.delete('/:id', async (req, res) => {
 // @route   GET /api/admin/orders/stats/overview
 // @desc    Get order statistics overview
 // @access  Admin
-router.get('/stats/overview', async (req, res) => {
+router.get('/stats/overview', checkPermission('orders', 'view'), async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
 
@@ -400,7 +401,7 @@ router.get('/stats/overview', async (req, res) => {
 // @route   GET /api/admin/orders/stats/revenue
 // @desc    Get revenue statistics by date range
 // @access  Admin
-router.get('/stats/revenue', async (req, res) => {
+router.get('/stats/revenue', checkPermission('orders', 'view'), async (req, res) => {
   try {
     const {
       startDate = new Date(new Date().setDate(new Date().getDate() - 30)),
@@ -463,7 +464,7 @@ router.get('/stats/revenue', async (req, res) => {
 // @route   POST /api/admin/orders/bulk-update-status
 // @desc    Bulk update order status
 // @access  Admin
-router.post('/bulk-update-status', async (req, res) => {
+router.post('/bulk-update-status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
     const { orderIds, status } = req.body;
 

@@ -136,6 +136,8 @@ const verifyOtp = async (req, res) => {
           email: user.email,
           role: user.role,
           isVerified: user.isVerified,
+          isSuperAdmin: user.isSuperAdmin || false,
+          permissions: user.permissions || {},
           addresses: user.addresses,
           favorites: user.favorites
         }

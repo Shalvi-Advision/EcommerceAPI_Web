@@ -12,6 +12,7 @@
     "test": "node test_api.js",
     "test:api": "jest",
     "create-admin": "node create-admin.js",
+    "migrate-permissions": "node migrate_admin_permissions.js",
     "update-postman": "node update-postman.js"
   },
   "keywords": [
@@ -42,6 +43,7 @@
     "multer": "^2.0.2",
     "node-cache": "^5.1.2",
     "razorpay": "^2.9.6",
+    "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

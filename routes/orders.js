@@ -5,6 +5,8 @@ const Cart = require('../models/Cart');
 const AddressBook = require('../models/AddressBook');
 const DeliverySlot = require('../models/DeliverySlot');
 const PaymentMode = require('../models/PaymentMode');
+const Offer = require('../models/Offer');
+const AdminNotification = require('../models/AdminNotification');
 const { protect } = require('../middleware/auth');
 const { createOrderPlacedNotification } = require('../utils/notificationService');
 
@@ -41,7 +43,9 @@ router.post('/place-order', protect, async (req, res, next) => {
       order_notes,
       payment_details,
       delivery_charges: clientDeliveryCharges,
-      delivery_distance
+      delivery_distance,
+      offer_id,
+      deal_items
     } = req.body;
 
     // Validate required fields
@@ -165,11 +169,97 @@ router.post('/place-order', protect, async (req, res, next) => {
     // Generate order number
     const orderNumber = await Order.generateOrderNumber();
 
-    // Calculate order totals
-    const subtotal = cart.subtotal;
+    // --- Process deal items (product deals) ---
+    let orderItems = cart.items.map(item => item.toObject());
+    let dealItemsApplied = [];
+    let dealSavings = 0;
+
+    if (deal_items && Array.isArray(deal_items) && deal_items.length > 0) {
+      const now = new Date();
+      // Calculate subtotal excluding deal item p_codes for eligibility check
+      const dealPCodes = deal_items.map(d => d.p_code);
+      const nonDealSubtotal = orderItems
+        .filter(item => !dealPCodes.includes(item.p_code))
+        .reduce((sum, item) => sum + item.total_price, 0);
+
+      for (const di of deal_items) {
+        const dealOffer = await Offer.findById(di.offer_id);
+        if (!dealOffer || dealOffer.offer_type !== 'product_deal' || !dealOffer.is_active) continue;
+        if (dealOffer.valid_from > now) continue;
+        if (dealOffer.valid_until && dealOffer.valid_until < now) continue;
+        if (nonDealSubtotal < dealOffer.min_cart_value) continue;
+        if (dealOffer.store_codes?.length > 0 && !dealOffer.store_codes.includes(store_code)) continue;
+
+        const dealProduct = (dealOffer.deal_products || []).find(dp => dp.p_code === di.p_code);
+        if (!dealProduct) continue;
+
+        const qty = Math.min(di.quantity || 1, dealProduct.max_quantity);
+
+        // Override item price in order
+        orderItems = orderItems.map(item => {
+          if (item.p_code === di.p_code) {
+            const savings = (item.unit_price - dealProduct.deal_price) * Math.min(item.quantity, qty);
+            dealSavings += savings;
+            return {
+              ...item,
+              unit_price: dealProduct.deal_price,
+              total_price: dealProduct.deal_price * item.quantity
+            };
+          }
+          return item;
+        });
+
+        dealItemsApplied.push({
+          offer_id: dealOffer._id.toString(),
+          offer_title: dealOffer.title,
+          p_code: di.p_code,
+          product_name: dealProduct.product_name,
+          deal_price: dealProduct.deal_price,
+          original_price: dealProduct.original_price,
+          quantity: qty,
+          savings: (dealProduct.original_price - dealProduct.deal_price) * qty
+        });
+      }
+    }
+
+    // Calculate order totals (using adjusted items if deals were applied)
+    const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
     const deliveryCharges = Math.max(0, parseFloat(clientDeliveryCharges) || 0);
-    const taxAmount = Math.round(subtotal * 0.18); // 18% GST (example)
-    const discountAmount = 0; // Could be calculated based on coupons/promotions
+    const taxAmount = Math.round(subtotal * 0.18); // 18% GST
+
+    // Calculate cart-level discount from offer
+    let discountAmount = 0;
+    let appliedOffer = null;
+
+    if (offer_id) {
+      const now = new Date();
+      const offer = await Offer.findById(offer_id);
+
+      if (offer && offer.is_active &&
+          (offer.offer_type || 'cart_discount') === 'cart_discount' &&
+          offer.valid_from <= now &&
+          (!offer.valid_until || offer.valid_until >= now) &&
+          subtotal >= offer.min_cart_value &&
+          (!offer.store_codes?.length || offer.store_codes.includes(store_code))) {
+
+        if (offer.discount_type === 'percentage') {
+          discountAmount = Math.round(subtotal * offer.discount_amount / 100);
+          if (offer.max_discount && discountAmount > offer.max_discount) {
+            discountAmount = offer.max_discount;
+          }
+        } else {
+          discountAmount = offer.discount_amount;
+        }
+
+        appliedOffer = {
+          offer_id: offer._id.toString(),
+          title: offer.title,
+          discount_type: offer.discount_type,
+          discount_amount: discountAmount
+        };
+      }
+    }
+
     const totalAmount = subtotal + deliveryCharges + taxAmount - discountAmount;
 
     // Determine payment status based on payment method
@@ -194,7 +284,7 @@ router.post('/place-order', protect, async (req, res, next) => {
       },
       store_code: store_code.trim(),
       project_code: project_code.trim(),
-      order_items: cart.items,
+      order_items: orderItems,
       delivery_info: {
         delivery_date: deliveryDateObj,
         delivery_slot_id: deliverySlot.iddelivery_slot,
@@ -228,7 +318,10 @@ router.post('/place-order', protect, async (req, res, next) => {
         discount_amount: discountAmount,
         total_amount: totalAmount,
         total_items: cart.total_items,
-        total_quantity: cart.total_quantity
+        total_quantity: cart.total_quantity,
+        applied_offer: appliedOffer || undefined,
+        deal_items_applied: dealItemsApplied.length > 0 ? dealItemsApplied : undefined,
+        deal_savings: dealSavings || undefined
       },
       order_notes: order_notes || '',
       estimated_delivery_date: deliveryDateObj
@@ -248,6 +341,40 @@ router.post('/place-order', protect, async (req, res, next) => {
         savedOrder.order_summary.total_amount
       );
     }
+
+    // Create admin notification for the new order
+    // Create admin notification and push via WebSocket
+    const notifData = {
+      title: 'New Order Placed',
+      body: `Order #${savedOrder.order_number} — ₹${savedOrder.order_summary.total_amount} by ${req.user?.name || req.user?.mobile || 'Customer'}`,
+      type: 'order',
+      data: {
+        order_number: savedOrder.order_number,
+        order_id: savedOrder._id,
+        total_amount: savedOrder.order_summary.total_amount,
+        customer_name: req.user?.name,
+        customer_mobile: req.user?.mobile,
+        store_code: savedOrder.store_code
+      }
+    };
+
+    AdminNotification.create(notifData)
+      .then((saved) => {
+        // Push real-time notification to all connected admins
+        const io = req.app.get('io');
+        if (io) {
+          io.to('admins').emit('new-admin-notification', {
+            _id: saved._id,
+            title: saved.title,
+            body: saved.body,
+            type: saved.type,
+            data: saved.data,
+            isRead: false,
+            createdAt: saved.createdAt
+          });
+        }
+      })
+      .catch(err => console.error('Admin notification error:', err));
 
     res.status(201).json({
       success: true,

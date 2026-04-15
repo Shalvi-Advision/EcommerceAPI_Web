@@ -11,6 +11,19 @@ const Pincode = require('../../models/Pincode');
 const Store = require('../../models/Store');
 const DeliverySlot = require('../../models/DeliverySlot');
 const Banner = require('../../models/Banner');
+const { checkPermission } = require('../../middleware/checkPermission');
+
+// Dynamic Section permissions (best-sellers, top-sellers, advertisements, popular-categories, seasonal-categories, banners)
+const dynView = checkPermission('dynamicSection', 'view');
+const dynCreate = checkPermission('dynamicSection', 'create');
+const dynEdit = checkPermission('dynamicSection', 'edit');
+const dynDelete = checkPermission('dynamicSection', 'delete');
+
+// Outlet permissions (payment-modes, pincodes, stores, delivery-slots)
+const outView = checkPermission('outlet', 'view');
+const outCreate = checkPermission('outlet', 'create');
+const outEdit = checkPermission('outlet', 'edit');
+const outDelete = checkPermission('outlet', 'delete');
 
 // Helper function to validate and sanitize MongoDB ObjectId
 const validateObjectId = (id) => {
@@ -255,7 +268,7 @@ const normalizeBannerPayload = (input, { isUpdate = false } = {}) => {
 // @route   GET /api/admin/content/best-sellers
 // @desc    Get all best sellers
 // @access  Admin
-router.get('/best-sellers', async (req, res) => {
+router.get('/best-sellers', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -299,7 +312,7 @@ router.get('/best-sellers', async (req, res) => {
 // @route   GET /api/admin/content/best-sellers/:id
 // @desc    Get single best seller by ID
 // @access  Admin
-router.get('/best-sellers/:id', async (req, res) => {
+router.get('/best-sellers/:id', dynView, async (req, res) => {
   try {
     const bestSeller = await BestSeller.findById(req.params.id);
 
@@ -327,7 +340,7 @@ router.get('/best-sellers/:id', async (req, res) => {
 // @route   POST /api/admin/content/best-sellers
 // @desc    Create best seller
 // @access  Admin
-router.post('/best-sellers', async (req, res) => {
+router.post('/best-sellers', dynCreate, async (req, res) => {
   try {
     const bestSeller = await BestSeller.create(req.body);
 
@@ -349,7 +362,7 @@ router.post('/best-sellers', async (req, res) => {
 // @route   PUT /api/admin/content/best-sellers/:id
 // @desc    Update best seller
 // @access  Admin
-router.put('/best-sellers/:id', async (req, res) => {
+router.put('/best-sellers/:id', dynEdit, async (req, res) => {
   try {
     const bestSeller = await BestSeller.findByIdAndUpdate(
       req.params.id,
@@ -382,7 +395,7 @@ router.put('/best-sellers/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/best-sellers/:id
 // @desc    Delete best seller
 // @access  Admin
-router.delete('/best-sellers/:id', async (req, res) => {
+router.delete('/best-sellers/:id', dynDelete, async (req, res) => {
   try {
     const bestSeller = await BestSeller.findByIdAndDelete(req.params.id);
 
@@ -412,7 +425,7 @@ router.delete('/best-sellers/:id', async (req, res) => {
 // @route   GET /api/admin/content/top-sellers
 // @desc    Get all top sellers
 // @access  Admin
-router.get('/top-sellers', async (req, res) => {
+router.get('/top-sellers', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -456,7 +469,7 @@ router.get('/top-sellers', async (req, res) => {
 // @route   GET /api/admin/content/top-sellers/:id
 // @desc    Get single top seller by ID
 // @access  Admin
-router.get('/top-sellers/:id', async (req, res) => {
+router.get('/top-sellers/:id', dynView, async (req, res) => {
   try {
     const topSeller = await TopSeller.findById(req.params.id);
 
@@ -484,7 +497,7 @@ router.get('/top-sellers/:id', async (req, res) => {
 // @route   POST /api/admin/content/top-sellers
 // @desc    Create top seller
 // @access  Admin
-router.post('/top-sellers', async (req, res) => {
+router.post('/top-sellers', dynCreate, async (req, res) => {
   try {
     const topSeller = await TopSeller.create(req.body);
 
@@ -506,7 +519,7 @@ router.post('/top-sellers', async (req, res) => {
 // @route   PUT /api/admin/content/top-sellers/:id
 // @desc    Update top seller
 // @access  Admin
-router.put('/top-sellers/:id', async (req, res) => {
+router.put('/top-sellers/:id', dynEdit, async (req, res) => {
   try {
     const topSeller = await TopSeller.findByIdAndUpdate(
       req.params.id,
@@ -539,7 +552,7 @@ router.put('/top-sellers/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/top-sellers/:id
 // @desc    Delete top seller
 // @access  Admin
-router.delete('/top-sellers/:id', async (req, res) => {
+router.delete('/top-sellers/:id', dynDelete, async (req, res) => {
   try {
     const topSeller = await TopSeller.findByIdAndDelete(req.params.id);
 
@@ -569,7 +582,7 @@ router.delete('/top-sellers/:id', async (req, res) => {
 // @route   GET /api/admin/content/advertisements
 // @desc    Get all advertisements
 // @access  Admin
-router.get('/advertisements', async (req, res) => {
+router.get('/advertisements', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -613,7 +626,7 @@ router.get('/advertisements', async (req, res) => {
 // @route   GET /api/admin/content/advertisements/:id
 // @desc    Get single advertisement by ID
 // @access  Admin
-router.get('/advertisements/:id', async (req, res) => {
+router.get('/advertisements/:id', dynView, async (req, res) => {
   try {
     const advertisement = await Advertisement.findById(req.params.id);
 
@@ -641,7 +654,7 @@ router.get('/advertisements/:id', async (req, res) => {
 // @route   POST /api/admin/content/advertisements
 // @desc    Create advertisement
 // @access  Admin
-router.post('/advertisements', async (req, res) => {
+router.post('/advertisements', dynCreate, async (req, res) => {
   try {
     const advertisement = await Advertisement.create(req.body);
 
@@ -663,7 +676,7 @@ router.post('/advertisements', async (req, res) => {
 // @route   PUT /api/admin/content/advertisements/:id
 // @desc    Update advertisement
 // @access  Admin
-router.put('/advertisements/:id', async (req, res) => {
+router.put('/advertisements/:id', dynEdit, async (req, res) => {
   try {
     const advertisement = await Advertisement.findByIdAndUpdate(
       req.params.id,
@@ -696,7 +709,7 @@ router.put('/advertisements/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/advertisements/:id
 // @desc    Delete advertisement
 // @access  Admin
-router.delete('/advertisements/:id', async (req, res) => {
+router.delete('/advertisements/:id', dynDelete, async (req, res) => {
   try {
     const advertisement = await Advertisement.findByIdAndDelete(req.params.id);
 
@@ -726,7 +739,7 @@ router.delete('/advertisements/:id', async (req, res) => {
 // @route   GET /api/admin/content/popular-categories
 // @desc    Get all popular categories
 // @access  Admin
-router.get('/popular-categories', async (req, res) => {
+router.get('/popular-categories', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -770,7 +783,7 @@ router.get('/popular-categories', async (req, res) => {
 // @route   GET /api/admin/content/popular-categories/:id
 // @desc    Get single popular category by ID
 // @access  Admin
-router.get('/popular-categories/:id', async (req, res) => {
+router.get('/popular-categories/:id', dynView, async (req, res) => {
   try {
     const popularCategory = await PopularCategory.findById(req.params.id);
 
@@ -798,7 +811,7 @@ router.get('/popular-categories/:id', async (req, res) => {
 // @route   POST /api/admin/content/popular-categories
 // @desc    Create popular category
 // @access  Admin
-router.post('/popular-categories', async (req, res) => {
+router.post('/popular-categories', dynCreate, async (req, res) => {
   try {
     const popularCategory = await PopularCategory.create(req.body);
 
@@ -820,7 +833,7 @@ router.post('/popular-categories', async (req, res) => {
 // @route   PUT /api/admin/content/popular-categories/:id
 // @desc    Update popular category
 // @access  Admin
-router.put('/popular-categories/:id', async (req, res) => {
+router.put('/popular-categories/:id', dynEdit, async (req, res) => {
   try {
     const popularCategory = await PopularCategory.findByIdAndUpdate(
       req.params.id,
@@ -853,7 +866,7 @@ router.put('/popular-categories/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/popular-categories/:id
 // @desc    Delete popular category
 // @access  Admin
-router.delete('/popular-categories/:id', async (req, res) => {
+router.delete('/popular-categories/:id', dynDelete, async (req, res) => {
   try {
     const popularCategory = await PopularCategory.findByIdAndDelete(req.params.id);
 
@@ -883,7 +896,7 @@ router.delete('/popular-categories/:id', async (req, res) => {
 // @route   GET /api/admin/content/seasonal-categories
 // @desc    Get all seasonal categories
 // @access  Admin
-router.get('/seasonal-categories', async (req, res) => {
+router.get('/seasonal-categories', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -927,7 +940,7 @@ router.get('/seasonal-categories', async (req, res) => {
 // @route   GET /api/admin/content/seasonal-categories/:id
 // @desc    Get single seasonal category by ID
 // @access  Admin
-router.get('/seasonal-categories/:id', async (req, res) => {
+router.get('/seasonal-categories/:id', dynView, async (req, res) => {
   try {
     const seasonalCategory = await SeasonalCategory.findById(req.params.id);
 
@@ -955,7 +968,7 @@ router.get('/seasonal-categories/:id', async (req, res) => {
 // @route   POST /api/admin/content/seasonal-categories
 // @desc    Create seasonal category
 // @access  Admin
-router.post('/seasonal-categories', async (req, res) => {
+router.post('/seasonal-categories', dynCreate, async (req, res) => {
   try {
     const seasonalCategory = await SeasonalCategory.create(req.body);
 
@@ -977,7 +990,7 @@ router.post('/seasonal-categories', async (req, res) => {
 // @route   PUT /api/admin/content/seasonal-categories/:id
 // @desc    Update seasonal category
 // @access  Admin
-router.put('/seasonal-categories/:id', async (req, res) => {
+router.put('/seasonal-categories/:id', dynEdit, async (req, res) => {
   try {
     const seasonalCategory = await SeasonalCategory.findByIdAndUpdate(
       req.params.id,
@@ -1010,7 +1023,7 @@ router.put('/seasonal-categories/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/seasonal-categories/:id
 // @desc    Delete seasonal category
 // @access  Admin
-router.delete('/seasonal-categories/:id', async (req, res) => {
+router.delete('/seasonal-categories/:id', dynDelete, async (req, res) => {
   try {
     const seasonalCategory = await SeasonalCategory.findByIdAndDelete(req.params.id);
 
@@ -1040,7 +1053,7 @@ router.delete('/seasonal-categories/:id', async (req, res) => {
 // @route   GET /api/admin/content/payment-modes
 // @desc    Get all payment modes
 // @access  Admin
-router.get('/payment-modes', async (req, res) => {
+router.get('/payment-modes', outView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -1084,7 +1097,7 @@ router.get('/payment-modes', async (req, res) => {
 // @route   POST /api/admin/content/payment-modes
 // @desc    Create payment mode
 // @access  Admin
-router.post('/payment-modes', async (req, res) => {
+router.post('/payment-modes', outCreate, async (req, res) => {
   try {
     const paymentMode = await PaymentMode.create(req.body);
 
@@ -1106,7 +1119,7 @@ router.post('/payment-modes', async (req, res) => {
 // @route   GET /api/admin/content/payment-modes/:id
 // @desc    Get payment mode by ID
 // @access  Admin
-router.get('/payment-modes/:id', async (req, res) => {
+router.get('/payment-modes/:id', outView, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1142,7 +1155,7 @@ router.get('/payment-modes/:id', async (req, res) => {
 // @route   PUT /api/admin/content/payment-modes/:id
 // @desc    Update payment mode
 // @access  Admin
-router.put('/payment-modes/:id', async (req, res) => {
+router.put('/payment-modes/:id', outEdit, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1179,7 +1192,7 @@ router.put('/payment-modes/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/payment-modes/:id
 // @desc    Delete payment mode
 // @access  Admin
-router.delete('/payment-modes/:id', async (req, res) => {
+router.delete('/payment-modes/:id', outDelete, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1217,7 +1230,7 @@ router.delete('/payment-modes/:id', async (req, res) => {
 // @route   GET /api/admin/content/pincodes
 // @desc    Get all pincodes
 // @access  Admin
-router.get('/pincodes', async (req, res) => {
+router.get('/pincodes', outView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -1271,7 +1284,7 @@ router.get('/pincodes', async (req, res) => {
 // @route   POST /api/admin/content/pincodes
 // @desc    Create pincode
 // @access  Admin
-router.post('/pincodes', async (req, res) => {
+router.post('/pincodes', outCreate, async (req, res) => {
   try {
     const pincode = await Pincode.create(req.body);
 
@@ -1293,7 +1306,7 @@ router.post('/pincodes', async (req, res) => {
 // @route   GET /api/admin/content/pincodes/:id
 // @desc    Get pincode by ID
 // @access  Admin
-router.get('/pincodes/:id', async (req, res) => {
+router.get('/pincodes/:id', outView, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1329,7 +1342,7 @@ router.get('/pincodes/:id', async (req, res) => {
 // @route   PUT /api/admin/content/pincodes/:id
 // @desc    Update pincode
 // @access  Admin
-router.put('/pincodes/:id', async (req, res) => {
+router.put('/pincodes/:id', outEdit, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1366,7 +1379,7 @@ router.put('/pincodes/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/pincodes/:id
 // @desc    Delete pincode
 // @access  Admin
-router.delete('/pincodes/:id', async (req, res) => {
+router.delete('/pincodes/:id', outDelete, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1404,7 +1417,7 @@ router.delete('/pincodes/:id', async (req, res) => {
 // @route   GET /api/admin/content/stores/codes
 // @desc    Get all unique store codes with store names
 // @access  Admin
-router.get('/stores/codes', async (req, res) => {
+router.get('/stores/codes', outView, async (req, res) => {
   try {
     const stores = await Store.find({ is_enabled: 'Enabled' })
       .select('store_code mobile_outlet_name')
@@ -1440,7 +1453,7 @@ router.get('/stores/codes', async (req, res) => {
 // @route   GET /api/admin/content/stores
 // @desc    Get all stores
 // @access  Admin
-router.get('/stores', async (req, res) => {
+router.get('/stores', outView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -1493,7 +1506,7 @@ router.get('/stores', async (req, res) => {
 // @route   GET /api/admin/content/stores/:id
 // @desc    Get store by ID
 // @access  Admin
-router.get('/stores/:id', async (req, res) => {
+router.get('/stores/:id', outView, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1607,7 +1620,7 @@ router.get('/stores/:id', async (req, res) => {
 // @route   POST /api/admin/content/stores
 // @desc    Create store
 // @access  Admin
-router.post('/stores', async (req, res) => {
+router.post('/stores', outCreate, async (req, res) => {
   try {
     const store = await Store.create(req.body);
 
@@ -1629,7 +1642,7 @@ router.post('/stores', async (req, res) => {
 // @route   PUT /api/admin/content/stores/:id
 // @desc    Update store
 // @access  Admin
-router.put('/stores/:id', async (req, res) => {
+router.put('/stores/:id', outEdit, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1884,7 +1897,7 @@ router.put('/stores/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/stores/:id
 // @desc    Delete store
 // @access  Admin
-router.delete('/stores/:id', async (req, res) => {
+router.delete('/stores/:id', outDelete, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -1922,7 +1935,7 @@ router.delete('/stores/:id', async (req, res) => {
 // @route   GET /api/admin/content/delivery-slots
 // @desc    Get all delivery slots
 // @access  Admin
-router.get('/delivery-slots', async (req, res) => {
+router.get('/delivery-slots', outView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -1966,7 +1979,7 @@ router.get('/delivery-slots', async (req, res) => {
 // @route   POST /api/admin/content/delivery-slots
 // @desc    Create delivery slot
 // @access  Admin
-router.post('/delivery-slots', async (req, res) => {
+router.post('/delivery-slots', outCreate, async (req, res) => {
   try {
     const deliverySlot = await DeliverySlot.create(req.body);
 
@@ -1988,7 +2001,7 @@ router.post('/delivery-slots', async (req, res) => {
 // @route   GET /api/admin/content/delivery-slots/:id
 // @desc    Get delivery slot by ID
 // @access  Admin
-router.get('/delivery-slots/:id', async (req, res) => {
+router.get('/delivery-slots/:id', outView, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -2024,7 +2037,7 @@ router.get('/delivery-slots/:id', async (req, res) => {
 // @route   PUT /api/admin/content/delivery-slots/:id
 // @desc    Update delivery slot
 // @access  Admin
-router.put('/delivery-slots/:id', async (req, res) => {
+router.put('/delivery-slots/:id', outEdit, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -2061,7 +2074,7 @@ router.put('/delivery-slots/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/delivery-slots/:id
 // @desc    Delete delivery slot
 // @access  Admin
-router.delete('/delivery-slots/:id', async (req, res) => {
+router.delete('/delivery-slots/:id', outDelete, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -2099,7 +2112,7 @@ router.delete('/delivery-slots/:id', async (req, res) => {
 // @route   GET /api/admin/content/banners
 // @desc    Get all banners
 // @access  Admin
-router.get('/banners', async (req, res) => {
+router.get('/banners', dynView, async (req, res) => {
   try {
     const {
       page = 1,
@@ -2151,7 +2164,7 @@ router.get('/banners', async (req, res) => {
 // @route   GET /api/admin/content/banners/:id
 // @desc    Get single banner by ID
 // @access  Admin
-router.get('/banners/:id', async (req, res) => {
+router.get('/banners/:id', dynView, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -2187,7 +2200,7 @@ router.get('/banners/:id', async (req, res) => {
 // @route   POST /api/admin/content/banners
 // @desc    Create banner
 // @access  Admin
-router.post('/banners', async (req, res) => {
+router.post('/banners', dynCreate, async (req, res) => {
   try {
     const payload = normalizeBannerPayload(req.body);
     const banner = await Banner.create(payload);
@@ -2210,7 +2223,7 @@ router.post('/banners', async (req, res) => {
 // @route   PUT /api/admin/content/banners/:id
 // @desc    Update banner
 // @access  Admin
-router.put('/banners/:id', async (req, res) => {
+router.put('/banners/:id', dynEdit, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
@@ -2248,7 +2261,7 @@ router.put('/banners/:id', async (req, res) => {
 // @route   DELETE /api/admin/content/banners/:id
 // @desc    Delete banner
 // @access  Admin
-router.delete('/banners/:id', async (req, res) => {
+router.delete('/banners/:id', dynDelete, async (req, res) => {
   try {
     const id = validateObjectId(req.params.id);
     if (!id) {
