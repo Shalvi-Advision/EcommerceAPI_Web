@@ -178,4 +178,113 @@ router.patch('/:slug/resume', requirePlatformAdmin, assertTenantAllowed, (req, r
   setStatus(req, res, 'active', 'tenant.resume')
 );
 
+// ---- Custom domain lifecycle (plan §10.4): pending -> approved -> live -------
+// The CNAME target retailers point their domain at (edge of the VPS).
+const EDGE_HOST = process.env.EDGE_HOST || 'edge.shalvi.in';
+
+async function logDomain(req, slug, action, meta) {
+  await AuditLog.create({
+    actorType: 'platformAdmin',
+    actorId: req.platformAdmin._id,
+    actorName: req.platformAdmin.name,
+    action,
+    tenantSlug: slug,
+    meta,
+    ip: req.ip,
+  }).catch(() => {});
+}
+
+// @route   PATCH /api/admin/tenants/:slug/domain   { customDomain }
+// @desc    Register/replace a tenant's custom domain -> domainStatus 'pending'.
+//          Returns the CNAME instruction to show the retailer.
+// @access  Platform admin
+router.patch('/:slug/domain', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const domain = (req.body.customDomain || '').toString().trim().toLowerCase();
+    if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
+      return res.status(400).json({ success: false, message: 'A valid customDomain is required' });
+    }
+    const taken = await Tenant.findOne({ customDomain: domain, slug: { $ne: req.params.slug } }).lean();
+    if (taken) {
+      return res.status(409).json({ success: false, message: 'Domain already in use by another tenant' });
+    }
+
+    const tenant = await Tenant.findOne({ slug: req.params.slug });
+    if (!tenant) return res.status(404).json({ success: false, message: 'Tenant not found' });
+
+    tenant.customDomain = domain;
+    tenant.domainStatus = 'pending';
+    await tenant.save();
+    resolveTenant.invalidate();
+    await logDomain(req, tenant.slug, 'domain.set', { customDomain: domain });
+
+    res.status(200).json({
+      success: true,
+      message: 'Domain registered; awaiting DNS + approval',
+      data: {
+        customDomain: domain,
+        domainStatus: 'pending',
+        cname: { host: domain, target: EDGE_HOST },
+        instructions: `Create a CNAME record: ${domain} -> ${EDGE_HOST}`,
+      },
+    });
+  } catch (error) {
+    console.error('Set domain error:', error);
+    res.status(500).json({ success: false, message: 'Failed to set domain', error: error.message });
+  }
+});
+
+// @route   PATCH /api/admin/tenants/:slug/domain/approve
+// @desc    Super-admin confirms DNS resolves -> domainStatus 'approved'. Now the
+//          ask endpoint (GET /api/internal/domain-allowed) returns 200 so Caddy
+//          will issue a cert on the first HTTPS request.
+// @access  Platform admin
+router.patch('/:slug/domain/approve', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ slug: req.params.slug });
+    if (!tenant) return res.status(404).json({ success: false, message: 'Tenant not found' });
+    if (!tenant.customDomain || tenant.domainStatus === 'none') {
+      return res.status(409).json({ success: false, message: 'No pending domain to approve' });
+    }
+    tenant.domainStatus = 'approved';
+    await tenant.save();
+    resolveTenant.invalidate();
+    await logDomain(req, tenant.slug, 'domain.approve', { customDomain: tenant.customDomain });
+    res.status(200).json({
+      success: true,
+      message: 'Domain approved; certificate will be issued on first HTTPS request',
+      data: { customDomain: tenant.customDomain, domainStatus: 'approved' },
+    });
+  } catch (error) {
+    console.error('Approve domain error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve domain', error: error.message });
+  }
+});
+
+// @route   PATCH /api/admin/tenants/:slug/domain/mark-live
+// @desc    Flip 'approved' -> 'live' once the cert is confirmed serving. (A future
+//          health check could automate this; for now it's an explicit step.)
+// @access  Platform admin
+router.patch('/:slug/domain/mark-live', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ slug: req.params.slug });
+    if (!tenant) return res.status(404).json({ success: false, message: 'Tenant not found' });
+    if (tenant.domainStatus !== 'approved' && tenant.domainStatus !== 'live') {
+      return res.status(409).json({ success: false, message: 'Domain must be approved before going live' });
+    }
+    tenant.domainStatus = 'live';
+    await tenant.save();
+    resolveTenant.invalidate();
+    await logDomain(req, tenant.slug, 'domain.live', { customDomain: tenant.customDomain });
+    res.status(200).json({
+      success: true,
+      message: 'Domain marked live',
+      data: { customDomain: tenant.customDomain, domainStatus: 'live' },
+    });
+  } catch (error) {
+    console.error('Mark live error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark live', error: error.message });
+  }
+});
+
 module.exports = router;

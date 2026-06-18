@@ -64,6 +64,8 @@ const tenantRoutes = require('./routes/tenant');
 // must be mounted BEFORE resolveTenant so they bypass tenant resolution.
 const platformAuthRoutes = require('./routes/control/platformAuth');
 const controlTenantRoutes = require('./routes/control/tenants');
+const internalRoutes = require('./routes/control/internal');
+const loopbackOnly = require('./middleware/loopbackOnly');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -216,8 +218,9 @@ app.get('/api-docs.json', (req, res) => {
 // control DB and have no tenant context (platform super-admin only). Future
 // additions (POST /api/admin/tenants provisioning, /api/internal/domain-allowed)
 // also belong here, above the resolveTenant line.
+app.use('/api/internal', loopbackOnly, internalRoutes); // Caddy on-demand-TLS ask gate (loopback only)
 app.use('/api/admin/platform', platformAuthRoutes);   // platform OTP login
-app.use('/api/admin/tenants', controlTenantRoutes);   // list / suspend / resume
+app.use('/api/admin/tenants', controlTenantRoutes);   // list / suspend / resume / provision / domains
 
 // Resolve the active tenant for every other /api/* business route. This attaches
 // req.tenant / req.db / req.models. Health, favicon, swagger and /api-docs are
