@@ -2,8 +2,10 @@ const express = require('express');
 
 const router = express.Router();
 
-const { Tenant, AuditLog } = require('../../db/controlConnection');
+const { Tenant, AuditLog, ProvisioningJob } = require('../../db/controlConnection');
 const { requirePlatformAdmin, assertTenantAllowed } = require('../../middleware/platformAuth');
+const { provisionTenant, deleteTenant } = require('../../services/provisionTenant');
+const { listTemplates } = require('../../lib/catalogTemplates');
 const resolveTenant = require('../../middleware/resolveTenant');
 
 // Control-plane tenant management (plan §8 "Tenants section"). These routes act on
@@ -35,6 +37,77 @@ router.get('/', requirePlatformAdmin, async (req, res) => {
   } catch (error) {
     console.error('List tenants error:', error);
     res.status(500).json({ success: false, message: 'Failed to list tenants', error: error.message });
+  }
+});
+
+// @route   GET /api/admin/tenants/catalog-templates
+// @desc    Available catalog seed templates (for the wizard's Catalog step)
+// @access  Platform admin
+// NOTE: declared BEFORE '/:slug' so 'catalog-templates' isn't matched as a slug.
+router.get('/catalog-templates', requirePlatformAdmin, (req, res) => {
+  res.status(200).json({ success: true, data: listTemplates() });
+});
+
+// @route   POST /api/admin/tenants
+// @desc    Provision a new tenant (transactional, with rollback). Returns the job.
+// @access  Platform admin
+router.post('/', requirePlatformAdmin, async (req, res) => {
+  try {
+    const { job, tenant } = await provisionTenant(req.body, {
+      id: req.platformAdmin._id,
+      name: req.platformAdmin.name,
+    });
+    res.status(201).json({
+      success: true,
+      message: 'Tenant provisioned',
+      data: { slug: tenant.slug, status: tenant.status, jobId: job._id },
+    });
+  } catch (error) {
+    console.error('Provision tenant error:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'Failed to provision tenant',
+      error: error.message,
+    });
+  }
+});
+
+// @route   GET /api/admin/tenants/:slug/job
+// @desc    Latest provisioning job for a tenant (step-by-step status)
+// @access  Platform admin
+router.get('/:slug/job', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const job = await ProvisioningJob.findOne({ tenantSlug: req.params.slug })
+      .sort({ createdAt: -1 })
+      .lean();
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'No provisioning job for this tenant' });
+    }
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    console.error('Get job error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get job', error: error.message });
+  }
+});
+
+// @route   DELETE /api/admin/tenants/:slug
+// @desc    Delete a tenant (drop its DB, mark deleted)
+// @access  Platform admin
+router.delete('/:slug', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const result = await deleteTenant(req.params.slug, {
+      id: req.platformAdmin._id,
+      name: req.platformAdmin.name,
+    });
+    resolveTenant.invalidate();
+    res.status(200).json({ success: true, message: 'Tenant deleted', data: result });
+  } catch (error) {
+    console.error('Delete tenant error:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'Failed to delete tenant',
+      error: error.message,
+    });
   }
 });
 
