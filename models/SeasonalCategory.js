@@ -169,4 +169,4 @@ seasonalCategorySchema.statics.findActiveBySeason = function(season, activeOn = 
   return this.find(query).sort({ sequence: 1, createdAt: -1 });
 };
 
-module.exports = mongoose.model('SeasonalCategory', seasonalCategorySchema);
+module.exports = { name: 'SeasonalCategory', schema: seasonalCategorySchema };

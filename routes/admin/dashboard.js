@@ -1,9 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../../models/User');
-const Product = require('../../models/Product');
-const Order = require('../../models/Order');
-const Category = require('../../models/Category');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // All dashboard routes require dashboard:view permission
@@ -14,6 +10,7 @@ router.use(checkPermission('dashboard', 'view'));
 // @access  Admin
 router.get('/overview', async (req, res) => {
   try {
+    const { User, Product, Order } = req.models;
     // Get current date ranges
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -196,6 +193,7 @@ router.get('/overview', async (req, res) => {
 // @access  Admin
 router.get('/sales-trend', async (req, res) => {
   try {
+    const { Order } = req.models;
     const { days = 30 } = req.query;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
@@ -239,6 +237,7 @@ router.get('/sales-trend', async (req, res) => {
 // @access  Admin
 router.get('/top-products', async (req, res) => {
   try {
+    const { Order } = req.models;
     const { limit = 10 } = req.query;
 
     const topProducts = await Order.aggregate([
@@ -284,6 +283,7 @@ router.get('/top-products', async (req, res) => {
 // @access  Admin
 router.get('/top-categories', async (req, res) => {
   try {
+    const { Product } = req.models;
     const { limit = 10 } = req.query;
 
     const topCategories = await Product.aggregate([
@@ -331,6 +331,7 @@ router.get('/top-categories', async (req, res) => {
 // @access  Admin
 router.get('/recent-orders', async (req, res) => {
   try {
+    const { Order } = req.models;
     const { limit = 10 } = req.query;
 
     const recentOrders = await Order.find()
@@ -357,6 +358,7 @@ router.get('/recent-orders', async (req, res) => {
 // @access  Admin
 router.get('/order-status-distribution', async (req, res) => {
   try {
+    const { Order } = req.models;
     const distribution = await Order.aggregate([
       {
         $group: {
@@ -389,6 +391,7 @@ router.get('/order-status-distribution', async (req, res) => {
 // @access  Admin
 router.get('/payment-status-distribution', async (req, res) => {
   try {
+    const { Order } = req.models;
     const distribution = await Order.aggregate([
       {
         $group: {
@@ -421,6 +424,7 @@ router.get('/payment-status-distribution', async (req, res) => {
 // @access  Admin
 router.get('/user-activity', async (req, res) => {
   try {
+    const { User } = req.models;
     const now = new Date();
 
     // Active in last hour

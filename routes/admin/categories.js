@@ -1,8 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Category = require('../../models/Category');
-const Department = require('../../models/Department');
-const Subcategory = require('../../models/Subcategory');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // All routes in this file fall under the 'ecommerce' permission section
@@ -18,6 +15,7 @@ const deletePerm = checkPermission('ecommerce', 'delete');
 // @access  Admin
 router.get('/', viewPerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -82,6 +80,7 @@ router.get('/', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/by-store', viewPerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const {
       store_code,
       search = '',
@@ -152,6 +151,7 @@ router.post('/by-store', viewPerm, async (req, res) => {
 // @access  Admin
 router.get('/:id', viewPerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const category = await Category.findById(req.params.id);
 
     if (!category) {
@@ -180,6 +180,7 @@ router.get('/:id', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/', createPerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const category = await Category.create(req.body);
 
     res.status(201).json({
@@ -202,6 +203,7 @@ router.post('/', createPerm, async (req, res) => {
 // @access  Admin
 router.put('/:id', editPerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const category = await Category.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -235,6 +237,7 @@ router.put('/:id', editPerm, async (req, res) => {
 // @access  Admin
 router.delete('/:id', deletePerm, async (req, res) => {
   try {
+    const { Category } = req.models;
     const category = await Category.findByIdAndDelete(req.params.id);
 
     if (!category) {
@@ -265,6 +268,7 @@ router.delete('/:id', deletePerm, async (req, res) => {
 // @access  Admin
 router.get('/departments/all', viewPerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -329,6 +333,7 @@ router.get('/departments/all', viewPerm, async (req, res) => {
 // @access  Admin
 router.get('/departments/:id', viewPerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const department = await Department.findById(req.params.id);
 
     if (!department) {
@@ -357,6 +362,7 @@ router.get('/departments/:id', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/departments', createPerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const department = await Department.create(req.body);
 
     res.status(201).json({
@@ -379,6 +385,7 @@ router.post('/departments', createPerm, async (req, res) => {
 // @access  Admin
 router.put('/departments/:id', editPerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const department = await Department.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -412,6 +419,7 @@ router.put('/departments/:id', editPerm, async (req, res) => {
 // @access  Admin
 router.delete('/departments/:id', deletePerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const department = await Department.findByIdAndDelete(req.params.id);
 
     if (!department) {
@@ -440,6 +448,7 @@ router.delete('/departments/:id', deletePerm, async (req, res) => {
 // @access  Admin
 router.post('/departments/by-store', viewPerm, async (req, res) => {
   try {
+    const { Department } = req.models;
     const {
       store_code,
       search = '',
@@ -517,6 +526,7 @@ router.post('/departments/by-store', viewPerm, async (req, res) => {
 // @access  Admin
 router.get('/subcategories/all', viewPerm, async (req, res) => {
   try {
+    const { Subcategory } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -576,6 +586,7 @@ router.get('/subcategories/all', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/subcategories/by-store', viewPerm, async (req, res) => {
   try {
+    const { Category, Subcategory } = req.models;
     const {
       store_code,
       search = '',
@@ -666,6 +677,7 @@ router.post('/subcategories/by-store', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/subcategories', createPerm, async (req, res) => {
   try {
+    const { Subcategory } = req.models;
     const subcategory = await Subcategory.create(req.body);
 
     res.status(201).json({
@@ -688,6 +700,7 @@ router.post('/subcategories', createPerm, async (req, res) => {
 // @access  Admin
 router.put('/subcategories/:id', editPerm, async (req, res) => {
   try {
+    const { Subcategory } = req.models;
     const subcategory = await Subcategory.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -721,6 +734,7 @@ router.put('/subcategories/:id', editPerm, async (req, res) => {
 // @access  Admin
 router.delete('/subcategories/:id', deletePerm, async (req, res) => {
   try {
+    const { Subcategory } = req.models;
     const subcategory = await Subcategory.findByIdAndDelete(req.params.id);
 
     if (!subcategory) {

@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Favorite = require('../models/Favorite');
 const { protect } = require('../middleware/auth');
 
 /**
@@ -12,6 +11,7 @@ const { protect } = require('../middleware/auth');
  */
 router.post('/add-to-favorites', protect, async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const { store_code, project_code, p_code } = req.body;
 
     // Validate required fields
@@ -92,6 +92,7 @@ router.post('/add-to-favorites', protect, async (req, res, next) => {
  */
 router.delete('/remove-from-favorites', protect, async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const { store_code, project_code, p_code } = req.body;
 
     // Validate required fields
@@ -155,6 +156,7 @@ router.delete('/remove-from-favorites', protect, async (req, res, next) => {
  */
 router.post('/get-favorites', protect, async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const { store_code, project_code } = req.body;
 
     // Validate required fields
@@ -223,6 +225,7 @@ router.post('/get-favorites', protect, async (req, res, next) => {
  */
 router.post('/get-favorites-by-store', protect, async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const { store_code, project_code } = req.body;
 
     // Validate required fields
@@ -291,6 +294,7 @@ router.post('/get-favorites-by-store', protect, async (req, res, next) => {
  */
 router.post('/is-favorited', protect, async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const { store_code, project_code, p_code } = req.body;
 
     // Validate required fields
@@ -349,6 +353,7 @@ router.post('/is-favorited', protect, async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Favorite } = req.models;
     const favorites = await Favorite.find().sort({ createdAt: -1 });
 
     if (!favorites || favorites.length === 0) {

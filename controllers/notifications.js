@@ -1,12 +1,12 @@
-const User = require('../models/User');
-const Notification = require('../models/Notification');
 const fcm = require('../utils/fcm');
+const { fcmFor } = require('../integrations/fcm');
 
 // @desc    Send notification to a specific user
 // @route   POST /api/admin/notifications/send-to-user
 // @access  Private/Admin
 const sendNotificationToUser = async (req, res) => {
     try {
+        const { User, Notification } = req.models;
         const { userId, title, body, data } = req.body;
 
         // Validation
@@ -51,8 +51,18 @@ const sendNotificationToUser = async (req, res) => {
             });
         }
 
+        // Push is optional per tenant; if unconfigured, the in-app record above
+        // is enough — don't fail the request.
+        const messaging = fcmFor(req.tenant);
+        if (!messaging) {
+            return res.status(200).json({
+                success: true,
+                message: 'Notification saved to history (Push not configured for this store)'
+            });
+        }
+
         // Send notification
-        const result = await fcm.sendNotificationToUser(user, title, body, data || {});
+        const result = await fcm.sendNotificationToUser(messaging, user, title, body, data || {});
 
         res.status(200).json({
             success: true,
@@ -75,6 +85,7 @@ const sendNotificationToUser = async (req, res) => {
 // @access  Private/Admin
 const sendNotificationToAllUsers = async (req, res) => {
     try {
+        const { User, Notification } = req.models;
         const { title, body, data } = req.body;
 
         // Validation
@@ -111,8 +122,17 @@ const sendNotificationToAllUsers = async (req, res) => {
             });
         }
 
+        // Push is optional per tenant; if unconfigured, history is already saved.
+        const messaging = fcmFor(req.tenant);
+        if (!messaging) {
+            return res.status(200).json({
+                success: true,
+                message: `Notifications saved to history for ${allUsers.length} users (Push not configured for this store)`
+            });
+        }
+
         // Send notification to all users
-        const result = await fcm.sendNotificationToAllUsers(usersWithTokens, title, body, data || {});
+        const result = await fcm.sendNotificationToAllUsers(messaging, usersWithTokens, title, body, data || {});
 
         res.status(200).json({
             success: true,
@@ -135,6 +155,7 @@ const sendNotificationToAllUsers = async (req, res) => {
 // @access  Private/Admin
 const getUsersWithFcmTokens = async (req, res) => {
     try {
+        const { User } = req.models;
         const users = await User.find(
             { fcmToken: { $ne: null, $exists: true } },
             { _id: 1, name: 1, mobile: 1, email: 1, lastActiveAt: 1 }
@@ -161,6 +182,7 @@ const getUsersWithFcmTokens = async (req, res) => {
 // @access  Private
 const getUserNotifications = async (req, res) => {
     try {
+        const { Notification } = req.models;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
@@ -197,6 +219,7 @@ const getUserNotifications = async (req, res) => {
 // @access  Private
 const getUnreadCount = async (req, res) => {
     try {
+        const { Notification } = req.models;
         const count = await Notification.countDocuments({
             user: req.user._id,
             isRead: false
@@ -222,6 +245,7 @@ const getUnreadCount = async (req, res) => {
 // @access  Private
 const markNotificationRead = async (req, res) => {
     try {
+        const { Notification } = req.models;
         const notification = await Notification.findOneAndUpdate(
             { _id: req.params.id, user: req.user._id },
             { isRead: true },
@@ -255,6 +279,7 @@ const markNotificationRead = async (req, res) => {
 // @access  Private
 const markAllNotificationsRead = async (req, res) => {
     try {
+        const { Notification } = req.models;
         await Notification.updateMany(
             { user: req.user._id, isRead: false },
             { $set: { isRead: true } }

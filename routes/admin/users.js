@@ -1,8 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../../models/User');
-const Order = require('../../models/Order');
-const Notification = require('../../models/Notification');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // @route   GET /api/admin/users
@@ -10,6 +7,7 @@ const { checkPermission } = require('../../middleware/checkPermission');
 // @access  Admin
 router.get('/', checkPermission('users', 'view'), async (req, res) => {
   try {
+    const { User, Notification } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -108,6 +106,7 @@ router.get('/', checkPermission('users', 'view'), async (req, res) => {
 // @access  Admin
 router.get('/:id', checkPermission('users', 'view'), async (req, res) => {
   try {
+    const { User, Order } = req.models;
     const user = await User.findById(req.params.id)
       .select('-otp -otpExpiresAt')
       .populate('addresses')
@@ -165,6 +164,7 @@ router.get('/:id', checkPermission('users', 'view'), async (req, res) => {
 // @access  Admin
 router.put('/:id', checkPermission('users', 'edit'), async (req, res) => {
   try {
+    const { User } = req.models;
     const { name, email, mobile, role, isVerified } = req.body;
 
     const updateData = {};
@@ -207,6 +207,7 @@ router.put('/:id', checkPermission('users', 'edit'), async (req, res) => {
 // @access  Admin
 router.delete('/:id', checkPermission('users', 'delete'), async (req, res) => {
   try {
+    const { User, Order } = req.models;
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -251,6 +252,7 @@ router.delete('/:id', checkPermission('users', 'delete'), async (req, res) => {
 // @access  Admin
 router.patch('/:id/role', checkPermission('users', 'edit'), async (req, res) => {
   try {
+    const { User } = req.models;
     const { role } = req.body;
 
     if (!role || !['user', 'admin'].includes(role)) {
@@ -293,6 +295,7 @@ router.patch('/:id/role', checkPermission('users', 'edit'), async (req, res) => 
 // @access  Admin
 router.get('/stats/overview', checkPermission('users', 'view'), async (req, res) => {
   try {
+    const { User } = req.models;
     const totalUsers = await User.countDocuments();
     const verifiedUsers = await User.countDocuments({ isVerified: true });
     const adminUsers = await User.countDocuments({ role: 'admin' });

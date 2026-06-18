@@ -331,4 +331,4 @@ productSchema.methods.addReview = function(userId, rating, comment) {
   return this.save();
 };
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = { name: 'Product', schema: productSchema };

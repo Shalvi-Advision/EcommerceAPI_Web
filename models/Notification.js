@@ -38,4 +38,4 @@ const notificationSchema = new mongoose.Schema({
 // Index for fetching user notifications quickly
 notificationSchema.index({ user: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = { name: 'Notification', schema: notificationSchema };

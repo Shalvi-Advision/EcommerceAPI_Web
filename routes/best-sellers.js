@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const BestSeller = require('../models/BestSeller');
-const ProductMaster = require('../models/ProductMaster');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -128,6 +126,7 @@ const mapProductMaster = (product) => ({
 
 router.post('/', async (req, res, next) => {
   try {
+    const { BestSeller } = req.models;
     const {
       banner_url,
       banner_url_desktop,
@@ -251,6 +250,7 @@ router.post('/', async (req, res, next) => {
 
 router.post('/list', async (req, res, next) => {
   try {
+    const { BestSeller, ProductMaster } = req.models;
     const {
       store_code,
       include_inactive,
@@ -324,6 +324,7 @@ router.post('/list', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const { BestSeller, ProductMaster } = req.models;
     const { id } = req.params;
     const { enrich_products } = req.query;
     const shouldEnrichProducts = parseBoolean(enrich_products, false);
@@ -373,6 +374,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
+    const { BestSeller } = req.models;
     const { id } = req.params;
     const {
       banner_url,
@@ -546,6 +548,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
+    const { BestSeller } = req.models;
     const { id } = req.params;
 
     const deletedBestSeller = await BestSeller.findByIdAndDelete(id);

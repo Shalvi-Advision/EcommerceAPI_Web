@@ -1,12 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order');
-const Cart = require('../models/Cart');
-const AddressBook = require('../models/AddressBook');
-const DeliverySlot = require('../models/DeliverySlot');
-const PaymentMode = require('../models/PaymentMode');
-const Offer = require('../models/Offer');
-const AdminNotification = require('../models/AdminNotification');
 const { protect } = require('../middleware/auth');
 const { createOrderPlacedNotification } = require('../utils/notificationService');
 
@@ -32,6 +25,7 @@ const { createOrderPlacedNotification } = require('../utils/notificationService'
  */
 router.post('/place-order', protect, async (req, res, next) => {
   try {
+    const { Order, Cart, AddressBook, DeliverySlot, PaymentMode, Offer, AdminNotification } = req.models;
     const {
       store_code,
       project_code,
@@ -336,6 +330,7 @@ router.post('/place-order', protect, async (req, res, next) => {
     // Create in-app notification for the user (API-based, no Firebase)
     if (req.user && req.user._id) {
       createOrderPlacedNotification(
+        req.models.Notification,
         req.user._id,
         savedOrder.order_number,
         savedOrder.order_summary.total_amount
@@ -426,6 +421,7 @@ router.post('/place-order', protect, async (req, res, next) => {
  */
 router.get('/my-orders', protect, async (req, res, next) => {
   try {
+    const { Order } = req.models;
     const userMobile = req.user.mobile;
     const limit = parseInt(req.query.limit) || 20;
 
@@ -489,6 +485,7 @@ router.get('/my-orders', protect, async (req, res, next) => {
  */
 router.get('/:orderNumber', protect, async (req, res, next) => {
   try {
+    const { Order } = req.models;
     const { orderNumber } = req.params;
     const userMobile = req.user.mobile;
 
@@ -538,6 +535,7 @@ router.get('/:orderNumber', protect, async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Order } = req.models;
     const limit = parseInt(req.query.limit) || 50;
     const status = req.query.status;
 

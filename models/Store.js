@@ -125,5 +125,5 @@ storeSchema.methods.hasSelfPickup = function() {
   return this.self_pickup === 'yes';
 };
 
-module.exports = mongoose.model('Store', storeSchema);
+module.exports = { name: 'Store', schema: storeSchema };
 

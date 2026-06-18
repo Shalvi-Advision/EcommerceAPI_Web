@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
 // Protect routes - verify JWT token
 const protect = async (req, res, next) => {
@@ -28,7 +27,16 @@ const protect = async (req, res, next) => {
         process.env.JWT_SECRET || 'your-secret-key'
       );
 
-      // Get user from token
+      // Reject tokens minted for a different tenant (cross-tenant replay).
+      if (decoded.tenant && req.tenant && decoded.tenant !== req.tenant.slug) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token is not valid for this tenant.'
+        });
+      }
+
+      // Get user from the active tenant's database.
+      const { User } = req.models;
       const user = await User.findById(decoded.id);
 
       if (!user) {
@@ -96,6 +104,12 @@ const optionalAuth = async (req, res, next) => {
           process.env.JWT_SECRET || 'your-secret-key'
         );
 
+        // Ignore (don't fail) a token minted for a different tenant.
+        if (decoded.tenant && req.tenant && decoded.tenant !== req.tenant.slug) {
+          return next();
+        }
+
+        const { User } = req.models;
         const user = await User.findById(decoded.id);
 
         if (user && user.isVerified) {

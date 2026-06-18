@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Store = require('../models/Store');
 
 /**
  * @route   POST /api/stores/by-pincode
@@ -11,6 +10,7 @@ const Store = require('../models/Store');
  */
 router.post('/by-pincode', async (req, res, next) => {
   try {
+    const { Store } = req.models;
     const { pincode } = req.body;
     
     // Validate pincode is provided

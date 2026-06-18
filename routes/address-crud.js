@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const AddressBook = require('../models/AddressBook');
 const { protect } = require('../middleware/auth');
 
 /**
@@ -12,6 +11,7 @@ const { protect } = require('../middleware/auth');
  */
 router.post('/add-address', protect, async (req, res, next) => {
   try {
+    const { AddressBook } = req.models;
     const {
       store_code,
       project_code,
@@ -148,6 +148,7 @@ router.post('/add-address', protect, async (req, res, next) => {
  */
 router.put('/update-address/:id', protect, async (req, res, next) => {
   try {
+    const { AddressBook } = req.models;
     const { id } = req.params;
     const {
       store_code,
@@ -266,6 +267,7 @@ router.put('/update-address/:id', protect, async (req, res, next) => {
  */
 router.delete('/delete-address/:id', protect, async (req, res, next) => {
   try {
+    const { AddressBook } = req.models;
     const { id } = req.params;
     const { store_code, project_code } = req.body;
 
@@ -329,6 +331,7 @@ router.delete('/delete-address/:id', protect, async (req, res, next) => {
  */
 router.post('/get-addresses', protect, async (req, res, next) => {
   try {
+    const { AddressBook } = req.models;
     const { store_code, project_code } = req.body;
 
     // Validate required fields
@@ -403,7 +406,7 @@ router.post('/get-addresses', protect, async (req, res, next) => {
  */
 router.post('/init-counter', protect, async (req, res, next) => {
   try {
-    const Counter = require('../models/Counter');
+    const { Counter } = req.models;
 
     // Initialize counter to start from 1
     const currentValue = await Counter.initializeCounter('address_book_id', 1);
@@ -428,7 +431,7 @@ router.post('/init-counter', protect, async (req, res, next) => {
  */
 router.post('/reset-counter', protect, async (req, res, next) => {
   try {
-    const Counter = require('../models/Counter');
+    const { Counter } = req.models;
 
     // Reset counter to 0
     const currentValue = await Counter.resetCounter('address_book_id', 0);
@@ -452,6 +455,7 @@ router.post('/reset-counter', protect, async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { AddressBook } = req.models;
     const addresses = await AddressBook.findAllSorted();
     
     if (!addresses || addresses.length === 0) {

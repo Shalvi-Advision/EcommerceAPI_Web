@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const PaymentMode = require('../models/PaymentMode');
 
 /**
  * @route   POST /api/payment-modes/get-payment-modes
@@ -11,6 +10,7 @@ const PaymentMode = require('../models/PaymentMode');
  */
 router.post('/get-payment-modes', async (req, res, next) => {
   try {
+    const { PaymentMode } = req.models;
     const { store_code, project_code } = req.body;
     
     // Validate required fields
@@ -71,6 +71,7 @@ router.post('/get-payment-modes', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { PaymentMode } = req.models;
     const paymentModes = await PaymentMode.findAllSorted();
     
     if (!paymentModes || paymentModes.length === 0) {
@@ -108,6 +109,7 @@ router.get('/', async (req, res, next) => {
  */
 router.get('/enabled', async (req, res, next) => {
   try {
+    const { PaymentMode } = req.models;
     const paymentModes = await PaymentMode.findEnabled();
     
     if (!paymentModes || paymentModes.length === 0) {

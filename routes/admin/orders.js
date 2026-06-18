@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../../models/Order');
-const User = require('../../models/User');
 const { createOrderStatusNotification, createPaymentStatusNotification } = require('../../utils/notificationService');
 const { checkPermission } = require('../../middleware/checkPermission');
 
@@ -10,6 +8,7 @@ const { checkPermission } = require('../../middleware/checkPermission');
 // @access  Admin
 router.get('/', checkPermission('orders', 'view'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -95,6 +94,7 @@ router.get('/', checkPermission('orders', 'view'), async (req, res) => {
 // @access  Admin
 router.get('/:id', checkPermission('orders', 'view'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -123,6 +123,7 @@ router.get('/:id', checkPermission('orders', 'view'), async (req, res) => {
 // @access  Admin
 router.patch('/:id/status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
+    const { Order, User } = req.models;
     const { status } = req.body;
 
     const validStatuses = ['placed', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled', 'refunded'];
@@ -151,7 +152,7 @@ router.patch('/:id/status', checkPermission('orders', 'edit'), async (req, res) 
       const user = await User.findOne({ mobile: order.mobile_no });
       if (user) {
         console.log(`✅ User found: ${user._id}, creating notification...`);
-        createOrderStatusNotification(user._id, order.order_number, status);
+        createOrderStatusNotification(req.models.Notification, user._id, order.order_number, status);
       } else {
         console.log(`⚠️ No user found for mobile: ${order.mobile_no}`);
       }
@@ -179,6 +180,7 @@ router.patch('/:id/status', checkPermission('orders', 'edit'), async (req, res) 
 // @access  Admin
 router.patch('/:id/payment-status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
+    const { Order, User } = req.models;
     const { paymentStatus, transactionId } = req.body;
 
     const validPaymentStatuses = ['pending', 'processing', 'completed', 'failed', 'cancelled'];
@@ -215,7 +217,7 @@ router.patch('/:id/payment-status', checkPermission('orders', 'edit'), async (re
     if (order.mobile_no) {
       const user = await User.findOne({ mobile: order.mobile_no });
       if (user) {
-        createPaymentStatusNotification(user._id, order.order_number, paymentStatus);
+        createPaymentStatusNotification(req.models.Notification, user._id, order.order_number, paymentStatus);
       }
     }
 
@@ -239,6 +241,7 @@ router.patch('/:id/payment-status', checkPermission('orders', 'edit'), async (re
 // @access  Admin
 router.put('/:id', checkPermission('orders', 'edit'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const updateData = {
       ...req.body,
       last_updated_at: new Date()
@@ -277,6 +280,7 @@ router.put('/:id', checkPermission('orders', 'edit'), async (req, res) => {
 // @access  Admin
 router.delete('/:id', checkPermission('orders', 'delete'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -315,6 +319,7 @@ router.delete('/:id', checkPermission('orders', 'delete'), async (req, res) => {
 // @access  Admin
 router.get('/stats/overview', checkPermission('orders', 'view'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const totalOrders = await Order.countDocuments();
 
     // Get orders by status
@@ -403,6 +408,7 @@ router.get('/stats/overview', checkPermission('orders', 'view'), async (req, res
 // @access  Admin
 router.get('/stats/revenue', checkPermission('orders', 'view'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const {
       startDate = new Date(new Date().setDate(new Date().getDate() - 30)),
       endDate = new Date(),
@@ -466,6 +472,7 @@ router.get('/stats/revenue', checkPermission('orders', 'view'), async (req, res)
 // @access  Admin
 router.post('/bulk-update-status', checkPermission('orders', 'edit'), async (req, res) => {
   try {
+    const { Order } = req.models;
     const { orderIds, status } = req.body;
 
     if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {

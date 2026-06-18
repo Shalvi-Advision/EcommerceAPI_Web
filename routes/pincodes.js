@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Pincode = require('../models/Pincode');
 
 /**
  * @route   GET /api/pincodes
@@ -12,6 +11,7 @@ const Pincode = require('../models/Pincode');
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Pincode } = req.models;
     const { enabled, page = 1, limit = 50, search } = req.query;
     
     // Build query
@@ -61,6 +61,7 @@ router.get('/', async (req, res, next) => {
  */
 router.get('/enabled/list', async (req, res, next) => {
   try {
+    const { Pincode } = req.models;
     const pincodes = await Pincode.findEnabled();
     
     // Return simplified data for frontend dropdowns
@@ -89,6 +90,7 @@ router.get('/enabled/list', async (req, res, next) => {
  */
 router.post('/check-availability', async (req, res, next) => {
   try {
+    const { Pincode } = req.models;
     const { pincode } = req.body;
     
     // Validate pincode is provided

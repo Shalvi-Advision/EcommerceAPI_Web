@@ -236,4 +236,4 @@ userSchema.methods.isActiveWithin = function (windowMs = 10 * 60 * 1000) {
   return (Date.now() - new Date(this.lastActiveAt).getTime()) <= windowMs;
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = { name: 'User', schema: userSchema };

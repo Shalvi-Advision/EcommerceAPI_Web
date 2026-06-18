@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Category = require('../models/Category');
-const Department = require('../models/Department');
 
 /**
  * @route   POST /api/categories/get-categories
@@ -11,6 +9,7 @@ const Department = require('../models/Department');
  */
 router.post('/get-categories', async (req, res, next) => {
   try {
+    const { Category } = req.models;
     const { dept_id, store_code, project_code } = req.body;
     
     // Validate required fields
@@ -87,6 +86,7 @@ router.post('/get-categories', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Category } = req.models;
     const categories = await Category.findAllSorted();
     
     if (!categories || categories.length === 0) {

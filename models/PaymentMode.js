@@ -37,4 +37,4 @@ paymentModeSchema.statics.findEnabled = function() {
   return this.find({ is_enabled: 'Yes' }).sort({ idpayment_mode: 1 });
 };
 
-module.exports = mongoose.model('PaymentMode', paymentModeSchema);
+module.exports = { name: 'PaymentMode', schema: paymentModeSchema };

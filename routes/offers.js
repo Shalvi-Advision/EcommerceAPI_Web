@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const Offer = require('../models/Offer');
-const Cart = require('../models/Cart');
 
 // @route   GET /api/offers/for-cart
 // @desc    Get applicable offers (cart discounts + product deals) for the user's current cart
 // @access  Private (authenticated user)
 router.get('/for-cart', protect, async (req, res) => {
   try {
+    const { Offer, Cart } = req.models;
     const { store_code, cart_total } = req.query;
 
     // Use client-provided cart total if available, otherwise read from DB

@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const Advertisement = require('../models/Advertisement');
-const ProductMaster = require('../models/ProductMaster');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -186,6 +184,7 @@ const mapProductMaster = (product) => ({
 
 router.post('/', async (req, res, next) => {
   try {
+    const { Advertisement } = req.models;
     const {
       title,
       description,
@@ -301,6 +300,7 @@ router.post('/', async (req, res, next) => {
 
 router.post('/list', async (req, res, next) => {
   try {
+    const { Advertisement, ProductMaster } = req.models;
     const {
       store_code,
       category,
@@ -441,6 +441,7 @@ router.post('/list', async (req, res, next) => {
 
 router.post('/active', async (req, res, next) => {
   try {
+    const { Advertisement, ProductMaster } = req.models;
     const { store_code, category, active_on, limit, enrich_products } = req.body;
 
     const activeDate = parseDate(active_on, { endOfDay: true }) || new Date();
@@ -527,6 +528,7 @@ router.post('/active', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const { Advertisement, ProductMaster } = req.models;
     const { id } = req.params;
     const { enrich_products } = req.query;
 
@@ -575,6 +577,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
+    const { Advertisement } = req.models;
     const { id } = req.params;
 
     const {
@@ -741,6 +744,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
+    const { Advertisement } = req.models;
     const { id } = req.params;
 
     const deletedAdvertisement = await Advertisement.findByIdAndDelete(id);

@@ -60,4 +60,4 @@ counterSchema.statics.resetCounter = async function(counterName, newValue = 0) {
   return counter.sequence_value;
 };
 
-module.exports = mongoose.model('Counter', counterSchema);
+module.exports = { name: 'Counter', schema: counterSchema };

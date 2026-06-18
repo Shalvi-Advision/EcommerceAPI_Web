@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const PopularCategory = require('../models/PopularCategory');
-const Subcategory = require('../models/Subcategory');
-const Category = require('../models/Category');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -171,7 +168,7 @@ const addCandidateId = (set, value) => {
   }
 };
 
-const buildEnrichmentMaps = async (sections) => {
+const buildEnrichmentMaps = async (sections, { Subcategory, Category }) => {
   const subcategoryIds = new Set();
   const categoryIds = new Set();
 
@@ -346,12 +343,12 @@ const enrichSubcategoryItem = (item, subcategoryMap, categoryMap) => {
   };
 };
 
-const enrichPopularCategorySections = async (sections) => {
+const enrichPopularCategorySections = async (sections, models) => {
   if (!Array.isArray(sections) || sections.length === 0) {
     return sections;
   }
 
-  const { subcategoryMap, categoryMap } = await buildEnrichmentMaps(sections);
+  const { subcategoryMap, categoryMap } = await buildEnrichmentMaps(sections, models);
 
   return sections.map((section) => ({
     ...section,
@@ -361,6 +358,7 @@ const enrichPopularCategorySections = async (sections) => {
 
 router.post('/', async (req, res, next) => {
   try {
+    const { PopularCategory } = req.models;
     const {
       banner_urls,
       banner_url,
@@ -462,6 +460,7 @@ router.post('/', async (req, res, next) => {
 
 router.post('/list', async (req, res, next) => {
   try {
+    const { PopularCategory } = req.models;
     const {
       store_code,
       include_inactive,
@@ -497,7 +496,7 @@ router.post('/list', async (req, res, next) => {
     }
 
     const responseData = shouldEnrich
-      ? await enrichPopularCategorySections(popularCategories)
+      ? await enrichPopularCategorySections(popularCategories, req.models)
       : popularCategories;
 
     res.status(200).json({
@@ -513,6 +512,7 @@ router.post('/list', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const { PopularCategory } = req.models;
     const { id } = req.params;
     const { enrich_subcategories } = req.query;
     const shouldEnrich = parseBoolean(enrich_subcategories, false);
@@ -527,7 +527,7 @@ router.get('/:id', async (req, res, next) => {
     }
 
     const responseData = shouldEnrich
-      ? (await enrichPopularCategorySections([popularCategory]))[0]
+      ? (await enrichPopularCategorySections([popularCategory], req.models))[0]
       : popularCategory;
 
     res.status(200).json({
@@ -542,6 +542,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
+    const { PopularCategory } = req.models;
     const { id } = req.params;
     const {
       banner_urls,
@@ -715,6 +716,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
+    const { PopularCategory } = req.models;
     const { id } = req.params;
 
     const deletedPopularCategory = await PopularCategory.findByIdAndDelete(id);

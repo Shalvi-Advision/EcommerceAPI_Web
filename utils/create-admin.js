@@ -1,36 +1,48 @@
 require('dotenv').config();
-const mongoose = require('mongoose');
-const User = require('../models/User');
+const { controlConn, Tenant } = require('../db/controlConnection');
+const { getTenantDb, closeAll } = require('../db/tenantConnections');
 
 /**
- * Create Admin User Script
+ * Create Admin User Script (multi-tenant)
  *
- * This script creates an admin user with:
- * - Mobile: 9999999999 (default admin number)
- * - Name: Admin
- * - Role: admin
- * - Verified: true
+ * Creates/updates an admin user INSIDE A SPECIFIC TENANT's database. Because the
+ * platform is DB-per-tenant, you must say which tenant the admin belongs to.
+ * The tenant is looked up in the control plane (by slug) to find its dbName,
+ * then the User model is bound to that tenant connection via the registry.
  *
  * Usage:
- *   node create-admin.js
+ *   node utils/create-admin.js <tenantSlug> [mobile]
  *
- * Or with custom mobile:
- *   node create-admin.js 9876543210
+ * Examples:
+ *   node utils/create-admin.js patel               # mobile 9999999999
+ *   node utils/create-admin.js patel 9876543210
  */
 
 async function createAdmin() {
   try {
-    // Get mobile from command line args or use default
-    const adminMobile = process.argv[2] || '9999999999';
+    const tenantSlug = process.argv[2];
+    const adminMobile = process.argv[3] || '9999999999';
     const adminName = 'Admin';
 
-    console.log('🔄 Connecting to database...');
+    if (!tenantSlug) {
+      console.error('❌ Usage: node utils/create-admin.js <tenantSlug> [mobile]');
+      process.exit(1);
+    }
 
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce');
+    console.log('🔄 Connecting to control plane...');
+    await controlConn.asPromise();
 
-    console.log('✅ Connected to database');
+    const tenant = await Tenant.findOne({ slug: tenantSlug }).lean();
+    if (!tenant) {
+      console.error(`❌ No tenant found with slug "${tenantSlug}". Create the tenant first.`);
+      process.exit(1);
+    }
+
+    console.log(`✅ Tenant: ${tenant.name} (db: ${tenant.dbName})`);
     console.log('🔄 Creating/updating admin user...');
+
+    const { models } = getTenantDb(tenant.dbName);
+    const { User } = models;
 
     // Check if user already exists
     let user = await User.findOne({ mobile: adminMobile });
@@ -63,6 +75,7 @@ async function createAdmin() {
     console.log('\n' + '='.repeat(50));
     console.log('🎉 ADMIN USER DETAILS');
     console.log('='.repeat(50));
+    console.log(`🏪 Tenant: ${tenant.slug}`);
     console.log(`📱 Mobile: ${user.mobile}`);
     console.log(`👤 Name: ${user.name}`);
     console.log(`📧 Email: ${user.email || 'Not set'}`);
@@ -72,9 +85,9 @@ async function createAdmin() {
     console.log('='.repeat(50));
 
     console.log('\n📋 NEXT STEPS:');
-    console.log('1. Get admin token:');
-    console.log(`   POST /api/auth/send-otp { "mobile": "${user.mobile}" }`);
-    console.log(`   POST /api/auth/verify-otp { "mobile": "${user.mobile}", "otp": "0000" }`);
+    console.log('1. Get admin token (send the tenant via Host/subdomain or X-Tenant header):');
+    console.log(`   POST /api/auth/send-otp    { "mobile": "${user.mobile}" }   (X-Tenant: ${tenant.slug})`);
+    console.log(`   POST /api/auth/verify-otp  { "mobile": "${user.mobile}", "otp": "0000" }`);
     console.log('\n2. Use the token to access admin APIs:');
     console.log('   Authorization: Bearer YOUR_TOKEN');
     console.log('\n3. Test admin endpoint:');
@@ -86,8 +99,9 @@ async function createAdmin() {
     console.error('❌ Error creating admin:', error.message);
     process.exit(1);
   } finally {
-    await mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    await closeAll().catch(() => {});
+    await controlConn.close().catch(() => {});
+    console.log('🔌 Connections closed');
     process.exit(0);
   }
 }

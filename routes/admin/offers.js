@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Offer = require('../../models/Offer');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // @route   GET /api/admin/offers
@@ -8,6 +7,7 @@ const { checkPermission } = require('../../middleware/checkPermission');
 // @access  Admin (offers:view)
 router.get('/', checkPermission('offers', 'view'), async (req, res) => {
   try {
+    const { Offer } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -53,6 +53,7 @@ router.get('/', checkPermission('offers', 'view'), async (req, res) => {
 // @access  Admin (offers:create)
 router.post('/', checkPermission('offers', 'create'), async (req, res) => {
   try {
+    const { Offer } = req.models;
     const offer = await Offer.create(req.body);
     res.status(201).json({
       success: true,
@@ -70,6 +71,7 @@ router.post('/', checkPermission('offers', 'create'), async (req, res) => {
 // @access  Admin (offers:edit)
 router.put('/:id', checkPermission('offers', 'edit'), async (req, res) => {
   try {
+    const { Offer } = req.models;
     const offer = await Offer.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -96,6 +98,7 @@ router.put('/:id', checkPermission('offers', 'edit'), async (req, res) => {
 // @access  Admin (offers:delete)
 router.delete('/:id', checkPermission('offers', 'delete'), async (req, res) => {
   try {
+    const { Offer } = req.models;
     const offer = await Offer.findByIdAndDelete(req.params.id);
 
     if (!offer) {
@@ -114,6 +117,7 @@ router.delete('/:id', checkPermission('offers', 'delete'), async (req, res) => {
 // @access  Admin (offers:edit)
 router.patch('/:id/toggle', checkPermission('offers', 'edit'), async (req, res) => {
   try {
+    const { Offer } = req.models;
     const offer = await Offer.findById(req.params.id);
 
     if (!offer) {

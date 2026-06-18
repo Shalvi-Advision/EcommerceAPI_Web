@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Store = require('../models/Store');
 const { calculateDistance, calculateDeliveryCharge, isValidCoordinate } = require('../utils/distanceCalculation');
 
 // @route   POST /api/delivery-charges/calculate
@@ -8,6 +7,7 @@ const { calculateDistance, calculateDeliveryCharge, isValidCoordinate } = requir
 // @access  Public
 router.post('/calculate', async (req, res) => {
   try {
+    const { Store } = req.models;
     const {
       store_code,
       address_latitude,

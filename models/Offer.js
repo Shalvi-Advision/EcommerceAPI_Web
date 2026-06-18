@@ -109,4 +109,4 @@ offerSchema.index({ is_active: 1, store_codes: 1, min_cart_value: 1 });
 offerSchema.index({ priority: 1, min_cart_value: 1 });
 offerSchema.index({ offer_type: 1, is_active: 1, store_codes: 1 });
 
-module.exports = mongoose.model('Offer', offerSchema);
+module.exports = { name: 'Offer', schema: offerSchema };

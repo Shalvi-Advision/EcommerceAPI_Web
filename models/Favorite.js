@@ -50,4 +50,4 @@ favoriteSchema.statics.removeFavorite = function(mobileNo, pCode, storeCode) {
   return this.findOneAndDelete({ mobile_no: mobileNo, p_code: pCode, store_code: storeCode });
 };
 
-module.exports = mongoose.model('Favorite', favoriteSchema);
+module.exports = { name: 'Favorite', schema: favoriteSchema };

@@ -3,15 +3,17 @@
  * Creates in-app notifications for order events (no Firebase push)
  */
 
-const Notification = require('../models/Notification');
+// Models are tenant-scoped: callers pass req.models.Notification so writes land
+// in the correct per-tenant database (plan §3). This module holds no connection.
 
 /**
  * Create notification when user places an order
+ * @param {import('mongoose').Model} Notification - tenant-bound Notification model
  * @param {string} userId - MongoDB User ID
  * @param {string} orderNumber - Order number
  * @param {number} totalAmount - Order total amount
  */
-const createOrderPlacedNotification = async (userId, orderNumber, totalAmount) => {
+const createOrderPlacedNotification = async (Notification, userId, orderNumber, totalAmount) => {
     try {
         await Notification.create({
             user: userId,
@@ -35,9 +37,10 @@ const createOrderPlacedNotification = async (userId, orderNumber, totalAmount) =
  * Create notification when order status is updated
  * @param {string} userId - MongoDB User ID
  * @param {string} orderNumber - Order number
+ * @param {import('mongoose').Model} Notification - tenant-bound Notification model
  * @param {string} newStatus - New order status
  */
-const createOrderStatusNotification = async (userId, orderNumber, newStatus) => {
+const createOrderStatusNotification = async (Notification, userId, orderNumber, newStatus) => {
     try {
         // Map status to user-friendly messages
         const statusMessages = {
@@ -84,9 +87,10 @@ const createOrderStatusNotification = async (userId, orderNumber, newStatus) => 
  * Create notification when payment status is updated
  * @param {string} userId - MongoDB User ID
  * @param {string} orderNumber - Order number
+ * @param {import('mongoose').Model} Notification - tenant-bound Notification model
  * @param {string} paymentStatus - New payment status
  */
-const createPaymentStatusNotification = async (userId, orderNumber, paymentStatus) => {
+const createPaymentStatusNotification = async (Notification, userId, orderNumber, paymentStatus) => {
     try {
         const paymentMessages = {
             'completed': 'Payment received successfully! ✅',

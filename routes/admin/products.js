@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../../models/Product');
-const ProductMaster = require('../../models/ProductMaster');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 const viewPerm = checkPermission('ecommerce', 'view');
@@ -14,6 +12,7 @@ const deletePerm = checkPermission('ecommerce', 'delete');
 // @access  Admin
 router.get('/', viewPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -109,6 +108,7 @@ router.get('/', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/by-store', viewPerm, async (req, res) => {
   try {
+    const { ProductMaster } = req.models;
     const {
       store_code,
       search = '',
@@ -214,6 +214,7 @@ router.post('/by-store', viewPerm, async (req, res) => {
 // @access  Admin
 router.get('/:id', viewPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const product = await Product.findById(req.params.id)
       .populate('category', 'name')
       .populate('subcategory', 'name')
@@ -249,6 +250,7 @@ router.get('/:id', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/', createPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const productData = {
       ...req.body,
       createdBy: req.user._id,
@@ -286,6 +288,7 @@ router.post('/', createPerm, async (req, res) => {
 // @access  Admin
 router.put('/:id', editPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const updateData = {
       ...req.body,
       updatedBy: req.user._id
@@ -326,6 +329,7 @@ router.put('/:id', editPerm, async (req, res) => {
 // @access  Admin
 router.delete('/:id', deletePerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const product = await Product.findByIdAndDelete(req.params.id);
 
     if (!product) {
@@ -354,6 +358,7 @@ router.delete('/:id', deletePerm, async (req, res) => {
 // @access  Admin
 router.patch('/:id/stock', editPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const { quantity, operation = 'set' } = req.body;
 
     if (quantity === undefined || quantity === null) {
@@ -416,6 +421,7 @@ router.patch('/:id/stock', editPerm, async (req, res) => {
 // @access  Admin
 router.patch('/:id/status', editPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const { status } = req.body;
 
     const validStatuses = ['active', 'inactive', 'out_of_stock', 'discontinued'];
@@ -459,6 +465,7 @@ router.patch('/:id/status', editPerm, async (req, res) => {
 // @access  Admin
 router.patch('/:id/price', editPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const { mrp, sellingPrice, discount } = req.body;
 
     const updateData = { updatedBy: req.user._id };
@@ -512,6 +519,7 @@ router.patch('/:id/price', editPerm, async (req, res) => {
 // @access  Admin
 router.get('/stats/overview', viewPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const totalProducts = await Product.countDocuments();
     const activeProducts = await Product.countDocuments({ status: 'active' });
     const outOfStock = await Product.countDocuments({ 'stock.quantity': 0 });
@@ -563,6 +571,7 @@ router.get('/stats/overview', viewPerm, async (req, res) => {
 // @access  Admin
 router.post('/bulk-update-status', editPerm, async (req, res) => {
   try {
+    const { Product } = req.models;
     const { productIds, status } = req.body;
 
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
@@ -610,6 +619,7 @@ router.post('/bulk-update-status', editPerm, async (req, res) => {
 // @access  Admin (ecommerce:create)
 router.post('/master', createPerm, async (req, res) => {
   try {
+    const { ProductMaster } = req.models;
     const product = await ProductMaster.create(req.body);
 
     res.status(201).json({
@@ -640,6 +650,7 @@ router.post('/master', createPerm, async (req, res) => {
 // @access  Admin (ecommerce:edit)
 router.put('/master/:id', editPerm, async (req, res) => {
   try {
+    const { ProductMaster } = req.models;
     const product = await ProductMaster.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -673,6 +684,7 @@ router.put('/master/:id', editPerm, async (req, res) => {
 // @access  Admin (ecommerce:delete)
 router.delete('/master/:id', deletePerm, async (req, res) => {
   try {
+    const { ProductMaster } = req.models;
     const product = await ProductMaster.findByIdAndDelete(req.params.id);
 
     if (!product) {

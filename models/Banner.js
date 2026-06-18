@@ -304,4 +304,4 @@ bannerSchema.pre('validate', function(next) {
   return next();
 });
 
-module.exports = mongoose.model('Banner', bannerSchema);
+module.exports = { name: 'Banner', schema: bannerSchema };

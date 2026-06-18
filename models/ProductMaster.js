@@ -132,4 +132,4 @@ productMasterSchema.statics.findAllSorted = function () {
   return this.find({ pcode_status: 'Y' }).sort({ product_name: 1 });
 };
 
-module.exports = mongoose.model('ProductMaster', productMasterSchema);
+module.exports = { name: 'ProductMaster', schema: productMasterSchema };

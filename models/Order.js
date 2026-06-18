@@ -342,4 +342,4 @@ orderSchema.methods.calculateDeliveryDate = function() {
   return deliveryDate;
 };
 
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = { name: 'Order', schema: orderSchema };

@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Cart = require('../models/Cart');
 const { protect } = require('../middleware/auth');
 
 /**
@@ -29,6 +28,7 @@ const { protect } = require('../middleware/auth');
  */
 router.post('/save-cart', protect, async (req, res, next) => {
   try {
+    const { Cart } = req.models;
     const { store_code, project_code, items } = req.body;
 
     // Validate required fields
@@ -141,6 +141,7 @@ router.post('/save-cart', protect, async (req, res, next) => {
  */
 router.post('/validate-cart', protect, async (req, res, next) => {
   try {
+    const { Cart } = req.models;
     const { store_code, project_code, autoFix } = req.body;
 
     // Validate required fields
@@ -338,6 +339,7 @@ router.post('/validate-cart', protect, async (req, res, next) => {
  */
 router.post('/get-cart', protect, async (req, res, next) => {
   try {
+    const { Cart } = req.models;
     const { store_code, project_code } = req.body;
 
     // Validate required fields
@@ -406,6 +408,7 @@ router.post('/get-cart', protect, async (req, res, next) => {
  */
 router.post('/clear-cart', protect, async (req, res, next) => {
   try {
+    const { Cart } = req.models;
     const { store_code, project_code } = req.body;
 
     // Validate required fields
@@ -480,6 +483,8 @@ router.post('/add-item', protect, async (req, res, next) => {
       brand_name,
       pcode_img
     } = req.body;
+
+    const { Cart } = req.models;
 
     // Validate required fields
     if (!store_code || !project_code || !p_code || !product_name || !quantity || unit_price === undefined) {
@@ -574,6 +579,7 @@ router.post('/add-item', protect, async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Cart } = req.models;
     const carts = await Cart.find().sort({ last_updated: -1 });
 
     if (!carts || carts.length === 0) {

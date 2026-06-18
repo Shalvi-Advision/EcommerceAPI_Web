@@ -50,4 +50,4 @@ subcategorySchema.statics.findAllSorted = function () {
   return this.find().sort({ idsub_category_master: 1 });
 };
 
-module.exports = mongoose.model('Subcategory', subcategorySchema);
+module.exports = { name: 'Subcategory', schema: subcategorySchema };

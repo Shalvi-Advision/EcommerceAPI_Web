@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Department = require('../models/Department');
 
 /**
  * @route   POST /api/departments/by-store
@@ -10,6 +9,7 @@ const Department = require('../models/Department');
  */
 router.post('/by-store', async (req, res, next) => {
   try {
+    const { Department } = req.models;
     const { store_code } = req.body;
     
     // If store_code is not provided or is empty/null, default to "null"
@@ -62,6 +62,7 @@ router.post('/by-store', async (req, res, next) => {
  */
 router.post('/by-type', async (req, res, next) => {
   try {
+    const { Department } = req.models;
     const { dept_type_id, store_code } = req.body;
     
     // Validate dept_type_id is provided
@@ -128,6 +129,7 @@ router.post('/by-type', async (req, res, next) => {
  */
 router.post('/get-departments', async (req, res, next) => {
   try {
+    const { Department } = req.models;
     const { store_code, project_code } = req.body;
     
     // Validate required fields
@@ -196,6 +198,7 @@ router.post('/get-departments', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Department } = req.models;
     const departments = await Department.findAllSorted();
     
     if (!departments || departments.length === 0) {

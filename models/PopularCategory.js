@@ -135,5 +135,5 @@ popularCategorySchema.statics.findByStoreCodes = function(storeCodes, activeOnly
   return this.find(query).sort({ sequence: 1, createdAt: -1 });
 };
 
-module.exports = mongoose.model('PopularCategory', popularCategorySchema);
+module.exports = { name: 'PopularCategory', schema: popularCategorySchema };
 

@@ -42,5 +42,5 @@ pincodeSchema.methods.isEnabled = function() {
   return this.is_enabled === 'Enabled';
 };
 
-module.exports = mongoose.model('Pincode', pincodeSchema);
+module.exports = { name: 'Pincode', schema: pincodeSchema };
 

@@ -9,37 +9,25 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const User = require('./models/User');
 
-const { connectDB } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
+
+// Multi-tenant control plane + per-request tenant resolution (plan §3, §4).
+// Importing controlConnection opens the control-plane DB connection at boot.
+// There is no default/shared DB connection any more — every model is bound to a
+// tenant connection resolved per request (or, for sockets, per token claim).
+const { controlConn, Tenant } = require('./db/controlConnection');
+const { getTenantDb } = require('./db/tenantConnections');
+const resolveTenant = require('./middleware/resolveTenant');
 
 // Swagger imports
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
-// Import models to register them with Mongoose
-require('./models/User');
-require('./models/Address');
-require('./models/Product');
-require('./models/ProductMaster');
-require('./models/Pincode');
-require('./models/Store');
-require('./models/Department');
-require('./models/Category');
-require('./models/Subcategory');
-require('./models/PaymentMode');
-require('./models/DeliverySlot');
-require('./models/AddressBook');
-require('./models/Counter');
-require('./models/Favorite');
-require('./models/Cart');
-require('./models/Order');
-require('./models/BestSeller');
-require('./models/TopSeller');
-require('./models/PopularCategory');
-require('./models/Advertisement');
+// NOTE: models are no longer registered on a global mongoose connection at boot.
+// db/modelRegistry.js binds them onto each tenant connection on first use
+// (resolveTenant -> getTenantDb), so there is nothing to pre-require here.
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -70,6 +58,7 @@ const adminRoutes = require('./routes/admin');
 const razorpayRoutes = require('./routes/razorpay');
 const notificationRoutes = require('./routes/notifications');
 const offerRoutes = require('./routes/offers');
+const tenantRoutes = require('./routes/tenant');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -197,7 +186,15 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
+// Resolve the active tenant for every /api/* business route. This attaches
+// req.tenant / req.db / req.models. Health, favicon, swagger and /api-docs are
+// declared above and stay tenant-agnostic. NOTE: control-plane routes added in
+// later phases — POST /api/admin/tenants and GET /api/internal/domain-allowed —
+// must be mounted BEFORE this line (they bypass tenant resolution).
+app.use('/api', resolveTenant);
+
 // API routes
+app.use('/api/tenant', tenantRoutes); // Public per-tenant config (branding + public keys)
 app.use('/api/auth', authLimiter, authRoutes); // Apply stricter rate limiting to auth routes
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -231,10 +228,12 @@ app.use('/api/notifications', notificationRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-// Connect to MongoDB and start server
+// Connect to the control plane and start the server. Tenant DBs are opened
+// lazily per request; only the control connection must be up at boot.
 const startServer = async () => {
   try {
-    await connectDB();
+    await controlConn.asPromise();
+    console.log(`Control plane connected: ${controlConn.name}`);
 
     // Create HTTP server and attach Socket.io
     const server = http.createServer(app);
@@ -249,17 +248,27 @@ const startServer = async () => {
     // Make io accessible to routes via req.app.get('io')
     app.set('io', io);
 
-    // Socket.io auth middleware — only allow admin connections
+    // Socket.io auth middleware — only allow admin connections.
+    // Multi-tenant: the JWT carries a `tenant` slug claim (see controllers/auth.js).
+    // We resolve that tenant's DB and look the admin up in its User collection, so
+    // an admin socket is scoped to exactly one tenant.
     io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth?.token;
         if (!token) return next(new Error('No token'));
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        const user = await User.findById(decoded.id).select('role name mobile');
+
+        if (!decoded.tenant) return next(new Error('No tenant in token'));
+        const tenant = await Tenant.findOne({ slug: decoded.tenant, status: 'active' }).lean();
+        if (!tenant) return next(new Error('Unknown tenant'));
+
+        const { models } = getTenantDb(tenant.dbName);
+        const user = await models.User.findById(decoded.id).select('role name mobile');
         if (!user || user.role !== 'admin') return next(new Error('Not admin'));
 
         socket.user = user;
+        socket.tenant = { slug: tenant.slug, dbName: tenant.dbName };
         next();
       } catch (err) {
         next(new Error('Auth failed'));

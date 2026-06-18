@@ -75,4 +75,4 @@ categorySchema.statics.findAllSorted = function () {
   return this.find().sort({ sequence_id: 1 });
 };
 
-module.exports = mongoose.model('Category', categorySchema);
+module.exports = { name: 'Category', schema: categorySchema };

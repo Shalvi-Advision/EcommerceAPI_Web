@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const DeliverySlot = require('../models/DeliverySlot');
 
 /**
  * @route   POST /api/delivery-slots/get-delivery-slots
@@ -11,6 +10,7 @@ const DeliverySlot = require('../models/DeliverySlot');
  */
 router.post('/get-delivery-slots', async (req, res, next) => {
   try {
+    const { DeliverySlot } = req.models;
     const { store_code, project_code } = req.body;
     
     // Validate required fields
@@ -73,6 +73,7 @@ router.post('/get-delivery-slots', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { DeliverySlot } = req.models;
     const deliverySlots = await DeliverySlot.findAllSorted();
     
     if (!deliverySlots || deliverySlots.length === 0) {
@@ -112,6 +113,7 @@ router.get('/', async (req, res, next) => {
  */
 router.get('/active/:storeCode', async (req, res, next) => {
   try {
+    const { DeliverySlot } = req.models;
     const { storeCode } = req.params;
     
     if (!storeCode || storeCode.trim() === '') {

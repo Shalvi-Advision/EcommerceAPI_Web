@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadToCloudinary } = require('../config/cloudinary');
+const { upload } = require('../config/cloudinary');
+const { cloudinaryFor } = require('../integrations/cloudinary');
 const { protect, authorize } = require('../middleware/auth');
 
 /**
@@ -20,8 +21,9 @@ router.post('/image', protect, authorize('admin'), upload.single('image'), async
     // Get folder from request or use default
     const folder = req.body.folder || 'ecommerce';
 
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file.buffer, folder);
+    // Upload to the tenant's Cloudinary account (422 if not configured)
+    const cl = cloudinaryFor(req.tenant);
+    const result = await cl.upload(req.file.buffer, folder);
 
     res.status(200).json({
       success: true,
@@ -36,9 +38,9 @@ router.post('/image', protect, authorize('admin'), upload.single('image'), async
     });
   } catch (error) {
     console.error('Image upload error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to upload image',
+      message: error.status === 422 ? error.message : 'Failed to upload image',
       error: error.message
     });
   }
@@ -61,8 +63,9 @@ router.post('/images', protect, authorize('admin'), upload.array('images', 10), 
     // Get folder from request or use default
     const folder = req.body.folder || 'ecommerce';
 
-    // Upload all images to Cloudinary
-    const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer, folder));
+    // Upload all images to the tenant's Cloudinary account (422 if not configured)
+    const cl = cloudinaryFor(req.tenant);
+    const uploadPromises = req.files.map(file => cl.upload(file.buffer, folder));
     const results = await Promise.all(uploadPromises);
 
     const uploadedImages = results.map(result => ({
@@ -80,9 +83,9 @@ router.post('/images', protect, authorize('admin'), upload.array('images', 10), 
     });
   } catch (error) {
     console.error('Images upload error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to upload images',
+      message: error.status === 422 ? error.message : 'Failed to upload images',
       error: error.message
     });
   }

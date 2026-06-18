@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const Banner = require('../models/Banner');
 
 // @route   POST /api/banners
 // @desc    Get banners grouped by sections (supports store filtering)
 // @access  Public
 router.post('/', async (req, res) => {
   try {
+    const { Banner } = req.models;
     const { store_code, section_name } = req.body;
 
     let banners;
@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
 // @access  Public
 router.get('/', async (req, res) => {
   try {
+    const { Banner } = req.models;
     const { store_code, section_name } = req.query;
 
     let banners;

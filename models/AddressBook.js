@@ -88,9 +88,11 @@ addressBookSchema.statics.findDefaultByMobileNumber = function(mobileNumber) {
 
 // Static method to generate next address book ID using counter
 addressBookSchema.statics.generateNextId = async function() {
-  const Counter = require('./Counter');
+  // `this` is the Model; this.db is its connection. Resolve Counter on the same
+  // connection so the sequence is per-tenant, not on the default connection.
+  const Counter = this.db.model('Counter');
   const nextSequence = await Counter.getNextSequence('address_book_id');
   return nextSequence.toString();
 };
 
-module.exports = mongoose.model('AddressBook', addressBookSchema);
+module.exports = { name: 'AddressBook', schema: addressBookSchema };

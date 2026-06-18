@@ -1,16 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const BestSeller = require('../../models/BestSeller');
-const TopSeller = require('../../models/TopSeller');
-const Advertisement = require('../../models/Advertisement');
-const PopularCategory = require('../../models/PopularCategory');
-const SeasonalCategory = require('../../models/SeasonalCategory');
-const PaymentMode = require('../../models/PaymentMode');
-const Pincode = require('../../models/Pincode');
-const Store = require('../../models/Store');
-const DeliverySlot = require('../../models/DeliverySlot');
-const Banner = require('../../models/Banner');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // Dynamic Section permissions (best-sellers, top-sellers, advertisements, popular-categories, seasonal-categories, banners)
@@ -270,6 +260,7 @@ const normalizeBannerPayload = (input, { isUpdate = false } = {}) => {
 // @access  Admin
 router.get('/best-sellers', dynView, async (req, res) => {
   try {
+    const { BestSeller } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -314,6 +305,7 @@ router.get('/best-sellers', dynView, async (req, res) => {
 // @access  Admin
 router.get('/best-sellers/:id', dynView, async (req, res) => {
   try {
+    const { BestSeller } = req.models;
     const bestSeller = await BestSeller.findById(req.params.id);
 
     if (!bestSeller) {
@@ -342,6 +334,7 @@ router.get('/best-sellers/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/best-sellers', dynCreate, async (req, res) => {
   try {
+    const { BestSeller } = req.models;
     const bestSeller = await BestSeller.create(req.body);
 
     res.status(201).json({
@@ -364,6 +357,7 @@ router.post('/best-sellers', dynCreate, async (req, res) => {
 // @access  Admin
 router.put('/best-sellers/:id', dynEdit, async (req, res) => {
   try {
+    const { BestSeller } = req.models;
     const bestSeller = await BestSeller.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -397,6 +391,7 @@ router.put('/best-sellers/:id', dynEdit, async (req, res) => {
 // @access  Admin
 router.delete('/best-sellers/:id', dynDelete, async (req, res) => {
   try {
+    const { BestSeller } = req.models;
     const bestSeller = await BestSeller.findByIdAndDelete(req.params.id);
 
     if (!bestSeller) {
@@ -427,6 +422,7 @@ router.delete('/best-sellers/:id', dynDelete, async (req, res) => {
 // @access  Admin
 router.get('/top-sellers', dynView, async (req, res) => {
   try {
+    const { TopSeller } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -471,6 +467,7 @@ router.get('/top-sellers', dynView, async (req, res) => {
 // @access  Admin
 router.get('/top-sellers/:id', dynView, async (req, res) => {
   try {
+    const { TopSeller } = req.models;
     const topSeller = await TopSeller.findById(req.params.id);
 
     if (!topSeller) {
@@ -499,6 +496,7 @@ router.get('/top-sellers/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/top-sellers', dynCreate, async (req, res) => {
   try {
+    const { TopSeller } = req.models;
     const topSeller = await TopSeller.create(req.body);
 
     res.status(201).json({
@@ -521,6 +519,7 @@ router.post('/top-sellers', dynCreate, async (req, res) => {
 // @access  Admin
 router.put('/top-sellers/:id', dynEdit, async (req, res) => {
   try {
+    const { TopSeller } = req.models;
     const topSeller = await TopSeller.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -554,6 +553,7 @@ router.put('/top-sellers/:id', dynEdit, async (req, res) => {
 // @access  Admin
 router.delete('/top-sellers/:id', dynDelete, async (req, res) => {
   try {
+    const { TopSeller } = req.models;
     const topSeller = await TopSeller.findByIdAndDelete(req.params.id);
 
     if (!topSeller) {
@@ -584,6 +584,7 @@ router.delete('/top-sellers/:id', dynDelete, async (req, res) => {
 // @access  Admin
 router.get('/advertisements', dynView, async (req, res) => {
   try {
+    const { Advertisement } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -628,6 +629,7 @@ router.get('/advertisements', dynView, async (req, res) => {
 // @access  Admin
 router.get('/advertisements/:id', dynView, async (req, res) => {
   try {
+    const { Advertisement } = req.models;
     const advertisement = await Advertisement.findById(req.params.id);
 
     if (!advertisement) {
@@ -656,6 +658,7 @@ router.get('/advertisements/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/advertisements', dynCreate, async (req, res) => {
   try {
+    const { Advertisement } = req.models;
     const advertisement = await Advertisement.create(req.body);
 
     res.status(201).json({
@@ -678,6 +681,7 @@ router.post('/advertisements', dynCreate, async (req, res) => {
 // @access  Admin
 router.put('/advertisements/:id', dynEdit, async (req, res) => {
   try {
+    const { Advertisement } = req.models;
     const advertisement = await Advertisement.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -711,6 +715,7 @@ router.put('/advertisements/:id', dynEdit, async (req, res) => {
 // @access  Admin
 router.delete('/advertisements/:id', dynDelete, async (req, res) => {
   try {
+    const { Advertisement } = req.models;
     const advertisement = await Advertisement.findByIdAndDelete(req.params.id);
 
     if (!advertisement) {
@@ -741,6 +746,7 @@ router.delete('/advertisements/:id', dynDelete, async (req, res) => {
 // @access  Admin
 router.get('/popular-categories', dynView, async (req, res) => {
   try {
+    const { PopularCategory } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -785,6 +791,7 @@ router.get('/popular-categories', dynView, async (req, res) => {
 // @access  Admin
 router.get('/popular-categories/:id', dynView, async (req, res) => {
   try {
+    const { PopularCategory } = req.models;
     const popularCategory = await PopularCategory.findById(req.params.id);
 
     if (!popularCategory) {
@@ -813,6 +820,7 @@ router.get('/popular-categories/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/popular-categories', dynCreate, async (req, res) => {
   try {
+    const { PopularCategory } = req.models;
     const popularCategory = await PopularCategory.create(req.body);
 
     res.status(201).json({
@@ -835,6 +843,7 @@ router.post('/popular-categories', dynCreate, async (req, res) => {
 // @access  Admin
 router.put('/popular-categories/:id', dynEdit, async (req, res) => {
   try {
+    const { PopularCategory } = req.models;
     const popularCategory = await PopularCategory.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -868,6 +877,7 @@ router.put('/popular-categories/:id', dynEdit, async (req, res) => {
 // @access  Admin
 router.delete('/popular-categories/:id', dynDelete, async (req, res) => {
   try {
+    const { PopularCategory } = req.models;
     const popularCategory = await PopularCategory.findByIdAndDelete(req.params.id);
 
     if (!popularCategory) {
@@ -898,6 +908,7 @@ router.delete('/popular-categories/:id', dynDelete, async (req, res) => {
 // @access  Admin
 router.get('/seasonal-categories', dynView, async (req, res) => {
   try {
+    const { SeasonalCategory } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -942,6 +953,7 @@ router.get('/seasonal-categories', dynView, async (req, res) => {
 // @access  Admin
 router.get('/seasonal-categories/:id', dynView, async (req, res) => {
   try {
+    const { SeasonalCategory } = req.models;
     const seasonalCategory = await SeasonalCategory.findById(req.params.id);
 
     if (!seasonalCategory) {
@@ -970,6 +982,7 @@ router.get('/seasonal-categories/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/seasonal-categories', dynCreate, async (req, res) => {
   try {
+    const { SeasonalCategory } = req.models;
     const seasonalCategory = await SeasonalCategory.create(req.body);
 
     res.status(201).json({
@@ -992,6 +1005,7 @@ router.post('/seasonal-categories', dynCreate, async (req, res) => {
 // @access  Admin
 router.put('/seasonal-categories/:id', dynEdit, async (req, res) => {
   try {
+    const { SeasonalCategory } = req.models;
     const seasonalCategory = await SeasonalCategory.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -1025,6 +1039,7 @@ router.put('/seasonal-categories/:id', dynEdit, async (req, res) => {
 // @access  Admin
 router.delete('/seasonal-categories/:id', dynDelete, async (req, res) => {
   try {
+    const { SeasonalCategory } = req.models;
     const seasonalCategory = await SeasonalCategory.findByIdAndDelete(req.params.id);
 
     if (!seasonalCategory) {
@@ -1055,6 +1070,7 @@ router.delete('/seasonal-categories/:id', dynDelete, async (req, res) => {
 // @access  Admin
 router.get('/payment-modes', outView, async (req, res) => {
   try {
+    const { PaymentMode } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -1099,6 +1115,7 @@ router.get('/payment-modes', outView, async (req, res) => {
 // @access  Admin
 router.post('/payment-modes', outCreate, async (req, res) => {
   try {
+    const { PaymentMode } = req.models;
     const paymentMode = await PaymentMode.create(req.body);
 
     res.status(201).json({
@@ -1129,6 +1146,7 @@ router.get('/payment-modes/:id', outView, async (req, res) => {
       });
     }
 
+    const { PaymentMode } = req.models;
     const paymentMode = await findDocumentById(PaymentMode, id, 'PaymentMode');
 
     if (!paymentMode) {
@@ -1165,6 +1183,7 @@ router.put('/payment-modes/:id', outEdit, async (req, res) => {
       });
     }
 
+    const { PaymentMode } = req.models;
     const paymentMode = await updateDocumentById(PaymentMode, id, req.body, 'PaymentMode');
 
     if (!paymentMode) {
@@ -1202,6 +1221,7 @@ router.delete('/payment-modes/:id', outDelete, async (req, res) => {
       });
     }
 
+    const { PaymentMode } = req.models;
     const paymentMode = await deleteDocumentById(PaymentMode, id, 'PaymentMode');
 
     if (!paymentMode) {
@@ -1232,6 +1252,7 @@ router.delete('/payment-modes/:id', outDelete, async (req, res) => {
 // @access  Admin
 router.get('/pincodes', outView, async (req, res) => {
   try {
+    const { Pincode } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -1286,6 +1307,7 @@ router.get('/pincodes', outView, async (req, res) => {
 // @access  Admin
 router.post('/pincodes', outCreate, async (req, res) => {
   try {
+    const { Pincode } = req.models;
     const pincode = await Pincode.create(req.body);
 
     res.status(201).json({
@@ -1316,6 +1338,7 @@ router.get('/pincodes/:id', outView, async (req, res) => {
       });
     }
 
+    const { Pincode } = req.models;
     const pincode = await findDocumentById(Pincode, id, 'Pincode');
 
     if (!pincode) {
@@ -1352,6 +1375,7 @@ router.put('/pincodes/:id', outEdit, async (req, res) => {
       });
     }
 
+    const { Pincode } = req.models;
     const pincode = await updateDocumentById(Pincode, id, req.body, 'Pincode');
 
     if (!pincode) {
@@ -1389,6 +1413,7 @@ router.delete('/pincodes/:id', outDelete, async (req, res) => {
       });
     }
 
+    const { Pincode } = req.models;
     const pincode = await deleteDocumentById(Pincode, id, 'Pincode');
 
     if (!pincode) {
@@ -1419,6 +1444,7 @@ router.delete('/pincodes/:id', outDelete, async (req, res) => {
 // @access  Admin
 router.get('/stores/codes', outView, async (req, res) => {
   try {
+    const { Store } = req.models;
     const stores = await Store.find({ is_enabled: 'Enabled' })
       .select('store_code mobile_outlet_name')
       .sort({ store_code: 1 });
@@ -1455,6 +1481,7 @@ router.get('/stores/codes', outView, async (req, res) => {
 // @access  Admin
 router.get('/stores', outView, async (req, res) => {
   try {
+    const { Store } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -1508,6 +1535,7 @@ router.get('/stores', outView, async (req, res) => {
 // @access  Admin
 router.get('/stores/:id', outView, async (req, res) => {
   try {
+    const { Store } = req.models;
     const id = validateObjectId(req.params.id);
     if (!id) {
       return res.status(400).json({
@@ -1622,6 +1650,7 @@ router.get('/stores/:id', outView, async (req, res) => {
 // @access  Admin
 router.post('/stores', outCreate, async (req, res) => {
   try {
+    const { Store } = req.models;
     const store = await Store.create(req.body);
 
     res.status(201).json({
@@ -1644,6 +1673,7 @@ router.post('/stores', outCreate, async (req, res) => {
 // @access  Admin
 router.put('/stores/:id', outEdit, async (req, res) => {
   try {
+    const { Store } = req.models;
     const id = validateObjectId(req.params.id);
     if (!id) {
       return res.status(400).json({
@@ -1907,6 +1937,7 @@ router.delete('/stores/:id', outDelete, async (req, res) => {
       });
     }
 
+    const { Store } = req.models;
     const store = await Store.findByIdAndDelete(id);
 
     if (!store) {
@@ -1937,6 +1968,7 @@ router.delete('/stores/:id', outDelete, async (req, res) => {
 // @access  Admin
 router.get('/delivery-slots', outView, async (req, res) => {
   try {
+    const { DeliverySlot } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -1981,6 +2013,7 @@ router.get('/delivery-slots', outView, async (req, res) => {
 // @access  Admin
 router.post('/delivery-slots', outCreate, async (req, res) => {
   try {
+    const { DeliverySlot } = req.models;
     const deliverySlot = await DeliverySlot.create(req.body);
 
     res.status(201).json({
@@ -2011,6 +2044,7 @@ router.get('/delivery-slots/:id', outView, async (req, res) => {
       });
     }
 
+    const { DeliverySlot } = req.models;
     const deliverySlot = await findDocumentById(DeliverySlot, id, 'DeliverySlot');
 
     if (!deliverySlot) {
@@ -2047,6 +2081,7 @@ router.put('/delivery-slots/:id', outEdit, async (req, res) => {
       });
     }
 
+    const { DeliverySlot } = req.models;
     const deliverySlot = await updateDocumentById(DeliverySlot, id, req.body, 'DeliverySlot');
 
     if (!deliverySlot) {
@@ -2084,6 +2119,7 @@ router.delete('/delivery-slots/:id', outDelete, async (req, res) => {
       });
     }
 
+    const { DeliverySlot } = req.models;
     const deliverySlot = await deleteDocumentById(DeliverySlot, id, 'DeliverySlot');
 
     if (!deliverySlot) {
@@ -2114,6 +2150,7 @@ router.delete('/delivery-slots/:id', outDelete, async (req, res) => {
 // @access  Admin
 router.get('/banners', dynView, async (req, res) => {
   try {
+    const { Banner } = req.models;
     const {
       page = 1,
       limit = 20,
@@ -2174,6 +2211,7 @@ router.get('/banners/:id', dynView, async (req, res) => {
       });
     }
 
+    const { Banner } = req.models;
     const banner = await findDocumentById(Banner, id, 'Banner');
 
     if (!banner) {
@@ -2202,6 +2240,7 @@ router.get('/banners/:id', dynView, async (req, res) => {
 // @access  Admin
 router.post('/banners', dynCreate, async (req, res) => {
   try {
+    const { Banner } = req.models;
     const payload = normalizeBannerPayload(req.body);
     const banner = await Banner.create(payload);
 
@@ -2233,6 +2272,7 @@ router.put('/banners/:id', dynEdit, async (req, res) => {
       });
     }
 
+    const { Banner } = req.models;
     const payload = normalizeBannerPayload(req.body, { isUpdate: true });
     const banner = await updateDocumentById(Banner, id, payload, 'Banner');
 
@@ -2271,6 +2311,7 @@ router.delete('/banners/:id', dynDelete, async (req, res) => {
       });
     }
 
+    const { Banner } = req.models;
     const banner = await deleteDocumentById(Banner, id, 'Banner');
 
     if (!banner) {

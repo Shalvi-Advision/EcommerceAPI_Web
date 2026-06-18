@@ -196,5 +196,5 @@ advertisementSchema.statics.findByStoreCodes = function({ storeCodes = null, cat
   return cursor;
 };
 
-module.exports = mongoose.model('Advertisement', advertisementSchema);
+module.exports = { name: 'Advertisement', schema: advertisementSchema };
 

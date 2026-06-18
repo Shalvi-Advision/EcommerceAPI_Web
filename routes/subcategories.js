@@ -1,8 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Subcategory = require('../models/Subcategory');
-const Category = require('../models/Category');
-const Department = require('../models/Department');
 
 /**
  * @route   POST /api/subcategories/get-subcategories
@@ -12,6 +9,7 @@ const Department = require('../models/Department');
  */
 router.post('/get-subcategories', async (req, res, next) => {
   try {
+    const { Subcategory, Category } = req.models;
     const { dept_id, store_code, project_code, idcategory_master } = req.body;
     
     // Validate required fields
@@ -115,6 +113,7 @@ router.post('/get-subcategories', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { Subcategory } = req.models;
     const subcategories = await Subcategory.findAllSorted();
     
     if (!subcategories || subcategories.length === 0) {

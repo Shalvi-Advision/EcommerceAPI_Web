@@ -157,7 +157,10 @@ cartSchema.statics.clearCart = function (mobileNo) {
 
 // Instance method to validate cart items against current product data
 cartSchema.methods.validateItems = async function () {
-  const ProductMaster = require('./ProductMaster');
+  // Resolve ProductMaster on THIS document's own connection so the lookup hits
+  // the same (tenant) database as the cart — not the default connection. The
+  // model is already registered on every tenant connection by the registry.
+  const ProductMaster = this.db.model('ProductMaster');
   const validationResults = {
     valid: true,
     invalidItems: [],
@@ -422,4 +425,4 @@ cartSchema.methods.validateItems = async function () {
   return validationResults;
 };
 
-module.exports = mongoose.model('Cart', cartSchema);
+module.exports = { name: 'Cart', schema: cartSchema };

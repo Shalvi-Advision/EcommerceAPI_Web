@@ -1,47 +1,19 @@
-const admin = require('firebase-admin');
-
-// Initialize Firebase Admin SDK
-let firebaseApp;
-
-const initializeFirebase = () => {
-    if (firebaseApp) {
-        return firebaseApp;
-    }
-
-    try {
-        // Initialize with JSON from environment variable
-        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-        if (serviceAccountJson) {
-            const serviceAccount = JSON.parse(serviceAccountJson);
-            firebaseApp = admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
-            });
-            console.log('Firebase Admin SDK initialized successfully');
-            return firebaseApp;
-        } else {
-            console.warn('Firebase Admin SDK not initialized: No service account credentials provided');
-            return null;
-        }
-    } catch (error) {
-        console.error('Failed to initialize Firebase Admin SDK:', error.message);
-        return null;
-    }
-};
+// Multi-tenant FCM sender. Every function takes a `messaging` instance built
+// per-tenant by integrations/fcm.js -> fcmFor(req.tenant). FCM is optional, so
+// callers may pass null (push is then skipped, never an error).
 
 /**
  * Send push notification to a specific user
+ * @param {import('firebase-admin').messaging.Messaging} messaging - tenant FCM messaging
  * @param {string} fcmToken - User's FCM token
  * @param {string} title - Notification title
  * @param {string} body - Notification body
  * @param {Object} data - Optional custom data payload
  * @returns {Promise<Object>} Response from FCM
  */
-const sendNotification = async (fcmToken, title, body, data = {}) => {
-    const app = initializeFirebase();
-
-    if (!app) {
-        throw new Error('Firebase Admin SDK not initialized');
+const sendNotification = async (messaging, fcmToken, title, body, data = {}) => {
+    if (!messaging) {
+        throw new Error('Push notifications are not configured for this store');
     }
 
     if (!fcmToken) {
@@ -87,7 +59,7 @@ const sendNotification = async (fcmToken, title, body, data = {}) => {
     };
 
     try {
-        const response = await admin.messaging().send(message);
+        const response = await messaging.send(message);
         console.log('Successfully sent notification:', response);
         return { success: true, messageId: response };
     } catch (error) {
@@ -104,12 +76,12 @@ const sendNotification = async (fcmToken, title, body, data = {}) => {
  * @param {Object} data - Optional custom data payload
  * @returns {Promise<Object>} Response from FCM
  */
-const sendNotificationToUser = async (user, title, body, data = {}) => {
+const sendNotificationToUser = async (messaging, user, title, body, data = {}) => {
     if (!user || !user.fcmToken) {
         throw new Error('User does not have an FCM token');
     }
 
-    return await sendNotification(user.fcmToken, title, body, data);
+    return await sendNotification(messaging, user.fcmToken, title, body, data);
 };
 
 /**
@@ -120,11 +92,9 @@ const sendNotificationToUser = async (user, title, body, data = {}) => {
  * @param {Object} data - Optional custom data payload
  * @returns {Promise<Object>} Summary of results
  */
-const sendNotificationToMultipleUsers = async (users, title, body, data = {}) => {
-    const app = initializeFirebase();
-
-    if (!app) {
-        throw new Error('Firebase Admin SDK not initialized');
+const sendNotificationToMultipleUsers = async (messaging, users, title, body, data = {}) => {
+    if (!messaging) {
+        throw new Error('Push notifications are not configured for this store');
     }
 
     // Filter users who have FCM tokens
@@ -175,7 +145,7 @@ const sendNotificationToMultipleUsers = async (users, title, body, data = {}) =>
     };
 
     try {
-        const response = await admin.messaging().sendEachForMulticast(message);
+        const response = await messaging.sendEachForMulticast(message);
         console.log(`Successfully sent notifications: ${response.successCount}/${tokens.length}`);
 
         return {
@@ -200,12 +170,11 @@ const sendNotificationToMultipleUsers = async (users, title, body, data = {}) =>
  * @param {Object} data - Optional custom data payload
  * @returns {Promise<Object>} Summary of results
  */
-const sendNotificationToAllUsers = async (users, title, body, data = {}) => {
-    return await sendNotificationToMultipleUsers(users, title, body, data);
+const sendNotificationToAllUsers = async (messaging, users, title, body, data = {}) => {
+    return await sendNotificationToMultipleUsers(messaging, users, title, body, data);
 };
 
 module.exports = {
-    initializeFirebase,
     sendNotification,
     sendNotificationToUser,
     sendNotificationToMultipleUsers,

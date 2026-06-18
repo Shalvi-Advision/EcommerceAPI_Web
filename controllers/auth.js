@@ -1,11 +1,12 @@
-const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const sms = require('../utils/sms');
+const { smsConfigFor } = require('../integrations/sms');
 
-// Generate JWT token
-const generateToken = (userId) => {
+// Generate JWT token. Binds the issuing tenant's slug into the token so it
+// cannot be replayed against another tenant (enforced in middleware/auth.js).
+const generateToken = (userId, tenantSlug) => {
   return jwt.sign(
-    { id: userId },
+    { id: userId, tenant: tenantSlug },
     process.env.JWT_SECRET || 'your-secret-key',
     {
       expiresIn: process.env.JWT_EXPIRE || '30d'
@@ -39,10 +40,12 @@ const sendOtp = async (req, res) => {
 
     // Find or create user
     // We still ensure user exists in DB, even if we don't store OTP there
+    const { User } = req.models;
     await User.findOrCreateByMobile(mobile);
 
-    // Send valid OTP via SMS Gateway
-    const smsResponse = await sms.sendOtp(mobile);
+    // Send valid OTP via the tenant's SMS Gateway (422 if not configured)
+    const smsCfg = smsConfigFor(req.tenant);
+    const smsResponse = await sms.sendOtp(smsCfg, mobile);
     console.log(`SMS OTP Sent to ${mobile}:`, smsResponse);
 
     // Send success response
@@ -54,9 +57,9 @@ const sendOtp = async (req, res) => {
 
   } catch (error) {
     console.error('Send OTP Error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to send OTP',
+      message: error.status === 422 ? error.message : 'Failed to send OTP',
       error: error.message
     });
   }
@@ -87,6 +90,7 @@ const verifyOtp = async (req, res) => {
     }
 
     // Find user by mobile
+    const { User } = req.models;
     const user = await User.findByMobile(mobile);
 
     if (!user) {
@@ -97,7 +101,8 @@ const verifyOtp = async (req, res) => {
     }
 
     // Verify OTP via SMS Gateway Provider
-    const isValid = await sms.verifyOtp(mobile, otp);
+    const smsCfg = smsConfigFor(req.tenant);
+    const isValid = await sms.verifyOtp(smsCfg, mobile, otp);
 
     if (!isValid) {
       return res.status(400).json({
@@ -120,8 +125,8 @@ const verifyOtp = async (req, res) => {
     }
     await user.save();
 
-    // Generate JWT token
-    const token = generateToken(user._id);
+    // Generate JWT token, bound to the issuing tenant
+    const token = generateToken(user._id, req.tenant.slug);
 
     // Send success response
     res.status(200).json({
@@ -146,9 +151,9 @@ const verifyOtp = async (req, res) => {
 
   } catch (error) {
     console.error('Verify OTP Error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to verify OTP',
+      message: error.status === 422 ? error.message : 'Failed to verify OTP',
       error: error.message
     });
   }
@@ -159,6 +164,7 @@ const verifyOtp = async (req, res) => {
 // @access  Private
 const getProfile = async (req, res) => {
   try {
+    const { User } = req.models;
     const user = await User.findById(req.user.id).populate('addresses').populate('favorites');
 
     res.status(200).json({
@@ -185,6 +191,7 @@ const updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body;
 
+    const { User } = req.models;
     const user = await User.findById(req.user.id);
 
     if (name) user.name = name;
@@ -246,6 +253,7 @@ const logout = async (req, res) => {
 const isActive = async (req, res) => {
   try {
     const { sessionId, device } = req.body || {};
+    const { User } = req.models;
     const user = await User.findById(req.user.id);
 
     const now = new Date();
@@ -318,6 +326,7 @@ const saveFcmToken = async (req, res) => {
       });
     }
 
+    const { User } = req.models;
     const user = await User.findById(req.user.id);
 
     if (!user) {

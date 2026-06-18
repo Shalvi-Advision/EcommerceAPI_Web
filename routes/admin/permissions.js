@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../../models/User');
 const { requireSuperAdmin } = require('../../middleware/checkPermission');
 
 // All routes in this file require super admin access
@@ -16,6 +15,7 @@ const DASHBOARD_ACTIONS = ['view']; // Dashboard only supports view
 // @access  Super Admin
 router.get('/admins', async (req, res) => {
   try {
+    const { User } = req.models;
     const admins = await User.find({ role: 'admin' })
       .select('name email mobile role isSuperAdmin permissions createdAt')
       .sort({ createdAt: -1 });
@@ -39,6 +39,7 @@ router.get('/admins', async (req, res) => {
 // @access  Super Admin
 router.get('/admins/:id', async (req, res) => {
   try {
+    const { User } = req.models;
     const admin = await User.findOne({ _id: req.params.id, role: 'admin' })
       .select('name email mobile role isSuperAdmin permissions');
 
@@ -68,6 +69,7 @@ router.get('/admins/:id', async (req, res) => {
 // @access  Super Admin
 router.put('/admins/:id', async (req, res) => {
   try {
+    const { User } = req.models;
     const { permissions } = req.body;
 
     if (!permissions || typeof permissions !== 'object') {

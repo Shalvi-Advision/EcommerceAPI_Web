@@ -137,4 +137,4 @@ addressSchema.pre('save', async function(next) {
   next();
 });
 
-module.exports = mongoose.model('Address', addressSchema);
+module.exports = { name: 'Address', schema: addressSchema };

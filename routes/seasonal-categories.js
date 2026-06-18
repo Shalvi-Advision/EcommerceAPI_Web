@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const SeasonalCategory = require('../models/SeasonalCategory');
-const Subcategory = require('../models/Subcategory');
-const Category = require('../models/Category');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -171,7 +168,7 @@ const addCandidateId = (set, value) => {
   }
 };
 
-const buildEnrichmentMaps = async (sections) => {
+const buildEnrichmentMaps = async (sections, { Subcategory, Category }) => {
   const subcategoryIds = new Set();
   const categoryIds = new Set();
 
@@ -346,12 +343,12 @@ const enrichSubcategoryItem = (item, subcategoryMap, categoryMap) => {
   };
 };
 
-const enrichSeasonalCategorySections = async (sections) => {
+const enrichSeasonalCategorySections = async (sections, models) => {
   if (!Array.isArray(sections) || sections.length === 0) {
     return sections;
   }
 
-  const { subcategoryMap, categoryMap } = await buildEnrichmentMaps(sections);
+  const { subcategoryMap, categoryMap } = await buildEnrichmentMaps(sections, models);
 
   return sections.map((section) => ({
     ...section,
@@ -361,6 +358,7 @@ const enrichSeasonalCategorySections = async (sections) => {
 
 router.post('/', async (req, res, next) => {
   try {
+    const { SeasonalCategory } = req.models;
     const {
       banner_urls,
       banner_url,
@@ -476,6 +474,7 @@ router.post('/', async (req, res, next) => {
 
 router.post('/list', async (req, res, next) => {
   try {
+    const { SeasonalCategory } = req.models;
     const {
       store_code,
       include_inactive,
@@ -532,7 +531,7 @@ router.post('/list', async (req, res, next) => {
     }
 
     const responseData = shouldEnrich
-      ? await enrichSeasonalCategorySections(seasonalCategories)
+      ? await enrichSeasonalCategorySections(seasonalCategories, req.models)
       : seasonalCategories;
 
     res.status(200).json({
@@ -548,6 +547,7 @@ router.post('/list', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const { SeasonalCategory } = req.models;
     const { id } = req.params;
     const { enrich_subcategories } = req.query;
     const shouldEnrich = parseBoolean(enrich_subcategories, false);
@@ -562,7 +562,7 @@ router.get('/:id', async (req, res, next) => {
     }
 
     const responseData = shouldEnrich
-      ? (await enrichSeasonalCategorySections([seasonalCategory]))[0]
+      ? (await enrichSeasonalCategorySections([seasonalCategory], req.models))[0]
       : seasonalCategory;
 
     res.status(200).json({
@@ -577,6 +577,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
+    const { SeasonalCategory } = req.models;
     const { id } = req.params;
     const {
       banner_urls,
@@ -765,6 +766,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
+    const { SeasonalCategory } = req.models;
     const { id } = req.params;
 
     const deletedSeasonalCategory = await SeasonalCategory.findByIdAndDelete(id);

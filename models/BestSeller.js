@@ -135,5 +135,5 @@ bestSellerSchema.statics.findByStoreCodes = function(storeCodes, activeOnly = fa
   return this.find(query).sort({ sequence: 1, createdAt: -1 });
 };
 
-module.exports = mongoose.model('BestSeller', bestSellerSchema);
+module.exports = { name: 'BestSeller', schema: bestSellerSchema };
 

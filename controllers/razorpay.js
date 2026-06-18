@@ -1,11 +1,5 @@
-const Razorpay = require('razorpay');
 const crypto = require('crypto');
-
-// Initialize Razorpay instance
-const instance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const { razorpayFor } = require('../integrations/razorpay');
 
 /**
  * @desc    Create Razorpay order
@@ -23,6 +17,8 @@ const createOrder = async (req, res) => {
         message: 'Invalid amount provided',
       });
     }
+
+    const { instance } = razorpayFor(req.tenant);
 
     const options = {
       amount: Number(amount) * 100, // amount in paise (multiply by 100)
@@ -42,9 +38,9 @@ const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error('Razorpay order creation error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Unable to create order',
+      message: error.status === 422 ? error.message : 'Unable to create order',
       error: error.message,
     });
   }
@@ -68,11 +64,13 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // Create HMAC signature
+    const { instance, keySecret } = razorpayFor(req.tenant);
+
+    // Create HMAC signature using THIS tenant's key secret
     const body = razorpay_order_id + '|' + razorpay_payment_id;
 
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', keySecret)
       .update(body.toString())
       .digest('hex');
 
@@ -121,10 +119,10 @@ const verifyPayment = async (req, res) => {
     }
   } catch (error) {
     console.error('Payment verification error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
       status: 'failure',
-      message: 'Payment verification failed',
+      message: error.status === 422 ? error.message : 'Payment verification failed',
       error: error.message,
     });
   }

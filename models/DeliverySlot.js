@@ -53,4 +53,4 @@ deliverySlotSchema.statics.findActiveByStoreCode = function(storeCode) {
   return this.find({ store_code: storeCode, is_active: 'yes' }).sort({ iddelivery_slot: 1 });
 };
 
-module.exports = mongoose.model('DeliverySlot', deliverySlotSchema);
+module.exports = { name: 'DeliverySlot', schema: deliverySlotSchema };

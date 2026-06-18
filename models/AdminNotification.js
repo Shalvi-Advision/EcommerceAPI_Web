@@ -31,4 +31,4 @@ const adminNotificationSchema = new mongoose.Schema({
 adminNotificationSchema.index({ createdAt: -1 });
 adminNotificationSchema.index({ isRead: 1, createdAt: -1 });
 
-module.exports = mongoose.model('AdminNotification', adminNotificationSchema);
+module.exports = { name: 'AdminNotification', schema: adminNotificationSchema };

@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const TopSeller = require('../models/TopSeller');
-const ProductMaster = require('../models/ProductMaster');
 const { normalizeStoreCodes } = require('../utils/routeHelpers');
 
 const parseBoolean = (value, defaultValue) => {
@@ -131,6 +129,7 @@ const mapProductMaster = (product) => ({
 // @access  Admin (via admin routes)
 router.post('/', async (req, res, next) => {
   try {
+    const { TopSeller } = req.models;
     const {
       bg_color,
       title,
@@ -208,6 +207,7 @@ router.post('/', async (req, res, next) => {
 // @access  Public
 router.post('/list', async (req, res, next) => {
   try {
+    const { TopSeller, ProductMaster } = req.models;
     const {
       store_code,
       include_inactive,
@@ -284,6 +284,7 @@ router.post('/list', async (req, res, next) => {
 // @access  Public
 router.get('/:id', async (req, res, next) => {
   try {
+    const { TopSeller, ProductMaster } = req.models;
     const { id } = req.params;
     const { enrich_products } = req.query;
     const shouldEnrichProducts = parseBoolean(enrich_products, false);
@@ -336,6 +337,7 @@ router.get('/:id', async (req, res, next) => {
 // @access  Admin (via admin routes)
 router.put('/:id', async (req, res, next) => {
   try {
+    const { TopSeller } = req.models;
     const { id } = req.params;
     const {
       bg_color,
@@ -440,6 +442,7 @@ router.put('/:id', async (req, res, next) => {
 // @access  Admin (via admin routes)
 router.delete('/:id', async (req, res, next) => {
   try {
+    const { TopSeller } = req.models;
     const { id } = req.params;
 
     const deletedTopSeller = await TopSeller.findByIdAndDelete(id);

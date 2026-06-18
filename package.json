@@ -4,14 +4,15 @@
   "description": "Optimized E-commerce API for Patel Mart with MongoDB Atlas",
   "main": "server.js",
   "scripts": {
-    "build": "echo \"Skipping build step; this API runs directly on Node.js\"",
+    "build": "npm run check:tenant-isolation && echo \"Skipping build step; this API runs directly on Node.js\"",
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "check:tenant-isolation": "node scripts/check-tenant-isolation.js",
     "upload": "node upload_patel_data.js",
     "clear-db": "node scripts/clear_database.js",
     "test": "node test_api.js",
     "test:api": "jest",
-    "create-admin": "node create-admin.js",
+    "create-admin": "node utils/create-admin.js",
     "migrate-permissions": "node migrate_admin_permissions.js",
     "update-postman": "node update-postman.js"
   },

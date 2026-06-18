@@ -1,36 +1,34 @@
 const axios = require('axios');
 
-// Configuration
-const SMS_CONFIG = {
-    baseUrl: process.env.SMS_BASE_URL || 'https://unify.smsgateway.center/SMSApi/otp',
-    userId: process.env.SMS_USER_ID || 'shalviadvision',
-    password: process.env.SMS_PASSWORD || 'Pall@vi1985',
-    senderId: process.env.SMS_SENDER_ID || 'SHALVI',
-    clientName: process.env.SMS_CLIENT_NAME || 'Grahak Peth',
-    defaultOtp: process.env.SMS_DEFAULT_OTP || '2786' // Backdoor OTP from PHP script
-};
+// Multi-tenant SMS gateway client. Each call takes the TENANT's gateway config
+// (resolved via integrations/sms.js -> smsConfigFor(req.tenant)); there is no
+// module-load shared account any more.
+//
+// The `2786` backdoor OTP is preserved (owner removes it later) and is sourced
+// from SMS_DEFAULT_OTP so it isn't hard-coded per tenant.
+const DEFAULT_OTP = process.env.SMS_DEFAULT_OTP || '2786'; // Backdoor OTP from PHP script
 
 /**
- * Send OTP via SMS Gateway
- * Uses the provider's generate functionality
+ * Send OTP via the tenant's SMS Gateway.
+ * @param {{baseUrl,userId,password,senderId,clientName}} cfg tenant SMS config
  * @param {string} mobile Mobile number (10 digits)
  * @returns {Promise<Object>} Response from gateway
  */
-const sendOtp = async (mobile) => {
+const sendOtp = async (cfg, mobile) => {
     try {
         // Format mobile with 91 prefix if not present
         const formattedMobile = mobile.startsWith('91') ? mobile : `91${mobile}`;
 
         // Construct message template - note the escaped $otp$ which the provider replaces
-        const msg = `Dear ${SMS_CONFIG.clientName} Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
+        const msg = `Dear ${cfg.clientName} Customer $otp$ is the One Time Password (OTP) for verifying your Mobile number. - Team SHALVI.`;
 
         // Construct params
         const params = new URLSearchParams();
-        params.append('userid', SMS_CONFIG.userId);
-        params.append('password', SMS_CONFIG.password);
+        params.append('userid', cfg.userId);
+        params.append('password', cfg.password);
         params.append('mobile', formattedMobile);
         params.append('msg', msg);
-        params.append('senderid', SMS_CONFIG.senderId);
+        params.append('senderid', cfg.senderId);
         params.append('msgType', 'text');
         params.append('format', 'json');
         params.append('sendMethod', 'generate');
@@ -39,7 +37,7 @@ const sendOtp = async (mobile) => {
         params.append('codeExpiry', '300'); // 5 minutes
         params.append('codeLength', '4');
 
-        const response = await axios.post(SMS_CONFIG.baseUrl, params);
+        const response = await axios.post(cfg.baseUrl, params);
         return response.data;
     } catch (error) {
         console.error('SMS Send Error:', error.response?.data || error.message);
@@ -48,15 +46,16 @@ const sendOtp = async (mobile) => {
 };
 
 /**
- * Verify OTP via SMS Gateway
+ * Verify OTP via the tenant's SMS Gateway.
+ * @param {{baseUrl,userId,password}} cfg tenant SMS config
  * @param {string} mobile Mobile number (10 digits)
  * @param {string} otp OTP to verify
  * @returns {Promise<boolean>} True if valid, false otherwise
  */
-const verifyOtp = async (mobile, otp) => {
+const verifyOtp = async (cfg, mobile, otp) => {
     try {
         // Check backdoor OTP
-        if (otp === SMS_CONFIG.defaultOtp) {
+        if (otp === DEFAULT_OTP) {
             return true;
         }
 
@@ -64,14 +63,14 @@ const verifyOtp = async (mobile, otp) => {
         const formattedMobile = mobile.startsWith('91') ? mobile : `91${mobile}`;
 
         const params = new URLSearchParams();
-        params.append('userid', SMS_CONFIG.userId);
-        params.append('password', SMS_CONFIG.password);
+        params.append('userid', cfg.userId);
+        params.append('password', cfg.password);
         params.append('mobile', formattedMobile);
         params.append('otp', otp);
         params.append('sendMethod', 'verify');
         params.append('format', 'json');
 
-        const response = await axios.post(SMS_CONFIG.baseUrl, params);
+        const response = await axios.post(cfg.baseUrl, params);
 
         // Check response status
         // Assuming response format based on successful verification patterns

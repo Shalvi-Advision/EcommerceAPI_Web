@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const ProductMaster = require('../models/ProductMaster');
 
 /**
  * @route   POST /api/products/productdetails
@@ -10,6 +9,7 @@ const ProductMaster = require('../models/ProductMaster');
  */
 router.post('/productdetails', async (req, res, next) => {
   try {
+    const { ProductMaster } = req.models;
     const { store_code, p_code } = req.body;
     
     // Validate required fields
@@ -88,6 +88,7 @@ router.post('/productdetails', async (req, res, next) => {
  */
 router.post('/search-products', async (req, res, next) => {
   try {
+    const { ProductMaster } = req.models;
     const { search_term, store_code, dept_id, category_id, sub_category_id } = req.body;
     
     // Validate required fields
@@ -188,6 +189,7 @@ router.post('/search-products', async (req, res, next) => {
  */
 router.post('/get-product-by-pcode', async (req, res, next) => {
   try {
+    const { ProductMaster } = req.models;
     const { store_code, dept_id, category_id, sub_category_id, pcode } = req.body;
     
     // Validate required fields
@@ -296,6 +298,7 @@ router.post('/get-product-by-pcode', async (req, res, next) => {
  */
 router.post('/get-products', async (req, res, next) => {
   try {
+    const { ProductMaster } = req.models;
     const { store_code, dept_id, category_id, sub_category_id } = req.body;
     
     // Validate required fields
@@ -392,6 +395,7 @@ router.post('/get-products', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
+    const { ProductMaster } = req.models;
     const products = await ProductMaster.findAllSorted();
     
     if (!products || products.length === 0) {

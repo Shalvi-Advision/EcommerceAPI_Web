@@ -77,5 +77,5 @@ departmentSchema.statics.findByType = function (deptTypeId, storeCode = null) {
   return this.find(query).sort({ sequence_id: 1 });
 };
 
-module.exports = mongoose.model('Department', departmentSchema);
+module.exports = { name: 'Department', schema: departmentSchema };
 

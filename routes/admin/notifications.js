@@ -5,7 +5,6 @@ const {
     sendNotificationToAllUsers,
     getUsersWithFcmTokens
 } = require('../../controllers/notifications');
-const AdminNotification = require('../../models/AdminNotification');
 const { checkPermission } = require('../../middleware/checkPermission');
 
 // @route   POST /api/admin/notifications/send-to-user
@@ -30,6 +29,7 @@ router.get('/users', checkPermission('notifications', 'view'), getUsersWithFcmTo
 // @access  Private/Admin
 router.get('/admin-alerts', checkPermission('notifications', 'view'), async (req, res) => {
   try {
+    const { AdminNotification } = req.models;
     const { page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -65,6 +65,7 @@ router.get('/admin-alerts', checkPermission('notifications', 'view'), async (req
 // @access  Private/Admin
 router.get('/admin-alerts/unread-count', checkPermission('notifications', 'view'), async (req, res) => {
   try {
+    const { AdminNotification } = req.models;
     const count = await AdminNotification.countDocuments({ isRead: false });
     res.status(200).json({ success: true, data: { count } });
   } catch (error) {
@@ -77,6 +78,7 @@ router.get('/admin-alerts/unread-count', checkPermission('notifications', 'view'
 // @access  Private/Admin
 router.put('/admin-alerts/mark-read', checkPermission('notifications', 'view'), async (req, res) => {
   try {
+    const { AdminNotification } = req.models;
     await AdminNotification.updateMany({ isRead: false }, { isRead: true });
     res.status(200).json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
@@ -89,6 +91,7 @@ router.put('/admin-alerts/mark-read', checkPermission('notifications', 'view'), 
 // @access  Private/Admin
 router.put('/admin-alerts/:id/read', checkPermission('notifications', 'view'), async (req, res) => {
   try {
+    const { AdminNotification } = req.models;
     await AdminNotification.findByIdAndUpdate(req.params.id, { isRead: true });
     res.status(200).json({ success: true });
   } catch (error) {
@@ -101,6 +104,7 @@ router.put('/admin-alerts/:id/read', checkPermission('notifications', 'view'), a
 // @access  Private/Admin
 router.delete('/admin-alerts/:id', checkPermission('notifications', 'delete'), async (req, res) => {
   try {
+    const { AdminNotification } = req.models;
     await AdminNotification.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Notification deleted' });
   } catch (error) {
