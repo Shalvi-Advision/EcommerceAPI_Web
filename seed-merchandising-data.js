@@ -1,18 +1,14 @@
+// Usage: node seed-merchandising-data.js <tenantSlug>
 require('dotenv').config();
-const mongoose = require('mongoose');
-const { connectDB } = require('./config/database');
-
-// Import models
-const BestSeller = require('./models/BestSeller');
-const PopularCategory = require('./models/PopularCategory');
-const Advertisement = require('./models/Advertisement');
-const ProductMaster = require('./models/ProductMaster');
-const Subcategory = require('./models/Subcategory');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 async function seedMerchandisingData() {
+  let close;
   try {
     console.log('🔗 Connecting to database...');
-    await connectDB();
+    const tenant = await openTenant(process.argv[2]);
+    close = tenant.close;
+    const { BestSeller, PopularCategory, Advertisement, ProductMaster, Subcategory } = tenant.models;
     console.log('✅ Connected to database successfully!\n');
 
     // Get sample product codes from database
@@ -21,6 +17,7 @@ async function seedMerchandisingData() {
 
     if (sampleProducts.length === 0) {
       console.error('❌ No products found in database. Please add products first.');
+      if (close) await close();
       process.exit(1);
     }
 
@@ -33,6 +30,7 @@ async function seedMerchandisingData() {
 
     if (sampleSubcategories.length === 0) {
       console.error('❌ No subcategories found in database. Please add subcategories first.');
+      if (close) await close();
       process.exit(1);
     }
 
@@ -225,10 +223,12 @@ async function seedMerchandisingData() {
     console.log(`   Popular Categories: ${await PopularCategory.countDocuments({})}`);
     console.log(`   Advertisements: ${await Advertisement.countDocuments({})}`);
 
+    if (close) await close();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
     console.error(error);
+    if (close) await close();
     process.exit(1);
   }
 }

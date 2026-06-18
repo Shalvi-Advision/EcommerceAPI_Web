@@ -1,7 +1,6 @@
-const mongoose = require('mongoose');
+// Usage: node create_admin_users.js <tenantSlug>
 require('dotenv').config();
-const { connectDB, disconnectDB } = require('./config/database');
-const User = require('./models/User');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 const adminNumbers = [
     '+91 98903 54858',
@@ -12,8 +11,11 @@ const adminNumbers = [
 ];
 
 const createAdminUsers = async () => {
+    let close;
     try {
-        await connectDB();
+        const { models, close: closeFn } = await openTenant(process.argv[2]);
+        close = closeFn;
+        const { User } = models;
         console.log('Connected to database for admin creation...');
 
         for (const rawNumber of adminNumbers) {
@@ -53,7 +55,7 @@ const createAdminUsers = async () => {
     } catch (error) {
         console.error('Error creating admin users:', error);
     } finally {
-        await disconnectDB();
+        if (close) await close();
         process.exit(0);
     }
 };

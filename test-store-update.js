@@ -1,11 +1,16 @@
+// Usage: node test-store-update.js <tenantSlug>
 const mongoose = require('mongoose');
 require('dotenv').config();
-const Store = require('./models/Store');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 async function testStoreUpdate() {
+  let close;
   try {
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
+    // Connect to tenant database
+    const tenant = await openTenant(process.argv[2]);
+    close = tenant.close;
+    const { Store } = tenant.models;
+    const db = tenant.db;
     console.log('Connected to MongoDB');
 
     const storeId = '68a8a1db4169ced4c49f93f4';
@@ -24,6 +29,7 @@ async function testStoreUpdate() {
       console.log('  is_enabled:', matchingStore.is_enabled);
     } else {
       console.log('✗ Store NOT found in find() results');
+      if (close) await close();
       return;
     }
 
@@ -70,7 +76,7 @@ async function testStoreUpdate() {
 
     // 8. Try direct MongoDB collection update
     console.log('\n8. Trying direct MongoDB collection update:');
-    const collection = mongoose.connection.db.collection('pincodestoremasters');
+    const collection = db.collection('pincodestoremasters');
     const directUpdate = await collection.updateOne(
       { _id: objectId },
       { $set: { is_enabled: 'Disabled' } }
@@ -97,11 +103,11 @@ async function testStoreUpdate() {
     console.log('  matchedCount:', altUpdate.matchedCount);
     console.log('  modifiedCount:', altUpdate.modifiedCount);
 
-    await mongoose.disconnect();
+    if (close) await close();
     console.log('\n=== Test Complete ===');
   } catch (error) {
     console.error('Error:', error);
-    await mongoose.disconnect();
+    if (close) await close();
   }
 }
 

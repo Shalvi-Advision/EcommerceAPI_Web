@@ -1,5 +1,6 @@
+// Usage: node upload_patel_data.js <tenantSlug> [clear]
 require('dotenv').config();
-const { connectDB, disconnectDB, mongoose } = require('./config/database');
+const { openTenant } = require('./scripts/lib/tenantScript');
 const { getDataFiles, readJsonFile, processFileData, getFileSize } = require('./utils/fileProcessor');
 
 /**
@@ -8,9 +9,10 @@ const { getDataFiles, readJsonFile, processFileData, getFileSize } = require('./
 async function uploadData() {
   console.log('🚀 Starting Patel Full Collection data upload to MongoDB Atlas...\n');
 
+  let db, close;
   try {
-    // Connect to MongoDB Atlas
-    await connectDB();
+    // Open the tenant's database
+    ({ db, close } = await openTenant(process.argv[2]));
 
     // Get all data files
     const files = await getDataFiles();
@@ -38,7 +40,7 @@ async function uploadData() {
         console.log(`   🔄 Processed records: ${processedData.length}`);
 
         // Get the collection
-        const collection = mongoose.connection.db.collection(file.collectionName);
+        const collection = db.collection(file.collectionName);
 
         // Clear existing data (optional - can be controlled via env var)
         if (process.env.CLEAR_BEFORE_UPLOAD === 'true') {
@@ -84,7 +86,7 @@ async function uploadData() {
     console.error('💥 Fatal error during upload:', error.message);
     process.exit(1);
   } finally {
-    await disconnectDB();
+    if (close) await close();
   }
 }
 
@@ -94,8 +96,9 @@ async function uploadData() {
 async function clearDatabase() {
   console.log('🗑️  Clearing all collections in Patel_Test_v2 database...');
 
+  let db, close;
   try {
-    await connectDB();
+    ({ db, close } = await openTenant(process.argv[2]));
 
     const collections = [
       'addressbooks',
@@ -113,7 +116,7 @@ async function clearDatabase() {
     ];
 
     for (const collectionName of collections) {
-      const collection = mongoose.connection.db.collection(collectionName);
+      const collection = db.collection(collectionName);
       const result = await collection.deleteMany({});
       console.log(`   🗑️  Cleared ${collectionName}: ${result.deletedCount} records`);
     }
@@ -123,13 +126,13 @@ async function clearDatabase() {
   } catch (error) {
     console.error('❌ Error clearing database:', error.message);
   } finally {
-    await disconnectDB();
+    if (close) await close();
   }
 }
 
 // Main execution
 if (require.main === module) {
-  const command = process.argv[2];
+  const command = process.argv[3];
 
   if (command === 'clear') {
     clearDatabase();

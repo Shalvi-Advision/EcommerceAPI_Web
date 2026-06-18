@@ -6,11 +6,10 @@
  *
  * Idempotent: safe to re-run.
  *
- * Usage: npm run migrate-permissions
+ * Usage: node migrate_admin_permissions.js <tenantSlug>
  */
 
-const { connectDB, disconnectDB } = require('./config/database');
-const User = require('./models/User');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 const SUPER_ADMIN_MOBILE = '8108053372';
 
@@ -37,7 +36,8 @@ const viewOnlyPermissions = {
 };
 
 async function migrate() {
-  await connectDB();
+  const { models, close } = await openTenant(process.argv[2]);
+  const { User } = models;
 
   const admins = await User.find({ role: 'admin' });
   console.log(`Found ${admins.length} admin user(s)\n`);
@@ -57,7 +57,7 @@ async function migrate() {
   }
 
   console.log('\nMigration complete.');
-  await disconnectDB();
+  if (close) await close();
   process.exit(0);
 }
 

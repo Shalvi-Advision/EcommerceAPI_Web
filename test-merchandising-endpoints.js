@@ -1,18 +1,14 @@
+// Usage: node test-merchandising-endpoints.js <tenantSlug>
 require('dotenv').config();
-const mongoose = require('mongoose');
-const { connectDB } = require('./config/database');
-
-// Import models
-const BestSeller = require('./models/BestSeller');
-const PopularCategory = require('./models/PopularCategory');
-const Advertisement = require('./models/Advertisement');
-const ProductMaster = require('./models/ProductMaster');
-const Subcategory = require('./models/Subcategory');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 async function testEndpoints() {
+  let close;
   try {
     console.log('🔗 Connecting to database...');
-    await connectDB();
+    const tenant = await openTenant(process.argv[2]);
+    close = tenant.close;
+    const { BestSeller, PopularCategory, Advertisement, ProductMaster, Subcategory } = tenant.models;
     console.log('✅ Connected to database successfully!\n');
 
     // Test Best Sellers
@@ -71,10 +67,12 @@ async function testEndpoints() {
     console.log('');
 
     console.log('✅ All tests completed!');
+    if (close) await close();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
     console.error(error);
+    if (close) await close();
     process.exit(1);
   }
 }

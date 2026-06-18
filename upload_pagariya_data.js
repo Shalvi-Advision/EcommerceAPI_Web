@@ -1,5 +1,6 @@
+// Usage: node upload_pagariya_data.js <tenantSlug>
 require('dotenv').config();
-const { connectDB, disconnectDB, mongoose } = require('./config/database');
+const { openTenant } = require('./scripts/lib/tenantScript');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -84,7 +85,7 @@ const getFileSize = async (filepath) => {
 /**
  * Clear all existing collections
  */
-async function clearDatabase() {
+async function clearDatabase(db) {
   console.log('🗑️  Clearing all collections in database...\n');
 
   try {
@@ -108,7 +109,7 @@ async function clearDatabase() {
 
     for (const collectionName of collections) {
       try {
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = db.collection(collectionName);
         const result = await collection.deleteMany({});
         console.log(`   ✅ Cleared ${collectionName}: ${result.deletedCount} records`);
       } catch (error) {
@@ -130,12 +131,13 @@ async function clearDatabase() {
 async function uploadData() {
   console.log('🚀 Starting Pagariya Collection data upload to MongoDB...\n');
 
+  let db, close;
   try {
-    // Connect to MongoDB
-    await connectDB();
+    // Open the tenant's database
+    ({ db, close } = await openTenant(process.argv[2]));
 
     // Clear existing data
-    await clearDatabase();
+    await clearDatabase(db);
 
     // Get all data files
     const files = await getDataFiles();
@@ -166,7 +168,7 @@ async function uploadData() {
         console.log(`   🔄 Processed records: ${processedData.length}`);
 
         // Get the collection
-        const collection = mongoose.connection.db.collection(file.collectionName);
+        const collection = db.collection(file.collectionName);
 
         // Insert data in batches for large files
         const batchSize = fileSize > 50 * 1024 * 1024 ? 1000 : 5000;
@@ -202,14 +204,14 @@ async function uploadData() {
     console.log('📋 Summary:');
     console.log(`   ✅ Successfully processed ${successCount}/${files.length} files`);
     console.log(`   📊 Total records inserted: ${totalInserted}`);
-    console.log(`   🗄️  Database: ${mongoose.connection.name}`);
+    console.log(`   🗄️  Database: ${db.databaseName}`);
     console.log(`   🌐 MongoDB connection established`);
 
   } catch (error) {
     console.error('💥 Fatal error during upload:', error.message);
     process.exit(1);
   } finally {
-    await disconnectDB();
+    if (close) await close();
   }
 }
 

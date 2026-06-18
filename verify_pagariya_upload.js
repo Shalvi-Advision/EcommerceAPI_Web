@@ -1,14 +1,15 @@
+// Usage: node verify_pagariya_upload.js <tenantSlug>
 require('dotenv').config();
-const { connectDB, disconnectDB } = require('./config/database');
-const ProductMaster = require('./models/ProductMaster');
-const Category = require('./models/Category');
-const Department = require('./models/Department');
+const { openTenant } = require('./scripts/lib/tenantScript');
 
 async function verifyUpload() {
     console.log('🔍 Verifying Pagariya Collection upload...\n');
 
+    let close;
     try {
-        await connectDB();
+        const { models, close: closeFn } = await openTenant(process.argv[2]);
+        close = closeFn;
+        const { ProductMaster, Category, Department } = models;
 
         // Check products
         const productCount = await ProductMaster.countDocuments();
@@ -38,7 +39,7 @@ async function verifyUpload() {
     } catch (error) {
         console.error('❌ Error:', error.message);
     } finally {
-        await disconnectDB();
+        if (close) await close();
     }
 }
 

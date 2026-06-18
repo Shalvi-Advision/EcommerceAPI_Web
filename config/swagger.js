@@ -4,12 +4,12 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Ecommerce Backend API Documentation',
+            title: 'Shalvi Multi-Tenant Commerce API',
             version: '1.0.0',
-            description: 'Complete API documentation for E-commerce platform including authentication, products, cart, orders, and admin endpoints',
+            description: 'Multi-tenant e-commerce platform API (authentication, products, cart, orders, admin, and control-plane tenant management). Requests are scoped to a tenant by Host or the X-Tenant header.',
             contact: {
-                name: 'Gaurav Pawar',
-                email: 'support@patelecommerce.com'
+                name: 'Shalvi Platform',
+                email: 'support@shalvi.in'
             },
             license: {
                 name: 'ISC',

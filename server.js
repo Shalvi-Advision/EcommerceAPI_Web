@@ -60,6 +60,11 @@ const notificationRoutes = require('./routes/notifications');
 const offerRoutes = require('./routes/offers');
 const tenantRoutes = require('./routes/tenant');
 
+// Control-plane routes (platform super-admin). These operate on the control DB and
+// must be mounted BEFORE resolveTenant so they bypass tenant resolution.
+const platformAuthRoutes = require('./routes/control/platformAuth');
+const controlTenantRoutes = require('./routes/control/tenants');
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -129,20 +134,37 @@ app.options('*', cors((req, callback) => {
   });
 }));
 
+// Per-tenant rate limiting (plan §6). Key by tenant + IP so each tenant gets its
+// own per-IP budget and a noisy tenant can't exhaust another's. req.tenant is set
+// by resolveTenant for business routes; for routes that run BEFORE resolveTenant
+// (the global generalLimiter, control/platform routes) the key falls back to
+// 'control', which is the correct scope for those.
+const tenantIpKey = (req) => `${req.tenant?.slug || 'control'}:${req.ip}`;
+
 // Rate limiting - stricter for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs for auth routes
+  max: 1000, // per tenant+IP, per window
+  keyGenerator: tenantIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later.',
     error: 'Too many authentication attempts, please try again later.'
   }
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1500, // limit each IP to 1000 requests per windowMs for general routes
+  max: 1500, // per tenant+IP, per window
+  keyGenerator: tenantIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
-    error: 'Too many requests from this IP, please try again later.'
+    success: false,
+    message: 'Too many requests, please try again later.',
+    error: 'Too many requests, please try again later.'
   }
 });
 
@@ -156,10 +178,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Compression middleware
 app.use(compression());
 
-// Logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
+// Logging middleware. Tag every request line with the resolved tenant slug
+// (plan §6) so logs are filterable per tenant. resolveTenant runs at /api, so
+// req.tenant is populated by the time morgan logs on response finish.
+morgan.token('tenant', (req) => req.tenant?.slug || '-');
+const logFormat = process.env.NODE_ENV === 'development'
+  ? ':method :url :status :response-time ms - tenant=:tenant'
+  : ':remote-addr :method :url :status :response-time ms tenant=:tenant';
+app.use(morgan(logFormat));
 
 // Suppress favicon requests
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -168,7 +194,7 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Patel E-commerce API is running',
+    message: 'Shalvi Commerce API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
@@ -177,7 +203,7 @@ app.get('/health', (req, res) => {
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Patel E-commerce API Docs'
+  customSiteTitle: 'Shalvi Commerce API Docs'
 }));
 
 // Swagger JSON endpoint
@@ -186,11 +212,16 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-// Resolve the active tenant for every /api/* business route. This attaches
+// Control-plane routes — mounted BEFORE resolveTenant because they act on the
+// control DB and have no tenant context (platform super-admin only). Future
+// additions (POST /api/admin/tenants provisioning, /api/internal/domain-allowed)
+// also belong here, above the resolveTenant line.
+app.use('/api/admin/platform', platformAuthRoutes);   // platform OTP login
+app.use('/api/admin/tenants', controlTenantRoutes);   // list / suspend / resume
+
+// Resolve the active tenant for every other /api/* business route. This attaches
 // req.tenant / req.db / req.models. Health, favicon, swagger and /api-docs are
-// declared above and stay tenant-agnostic. NOTE: control-plane routes added in
-// later phases — POST /api/admin/tenants and GET /api/internal/domain-allowed —
-// must be mounted BEFORE this line (they bypass tenant resolution).
+// declared above and stay tenant-agnostic.
 app.use('/api', resolveTenant);
 
 // API routes
@@ -287,12 +318,12 @@ const startServer = async () => {
 
     server.listen(PORT, () => {
       console.log(`
-🚀 Patel E-commerce API Server Started!
+🚀 Shalvi Commerce API Server Started!
 📍 Running on: http://localhost:${PORT}
 🌍 Environment: ${process.env.NODE_ENV || 'development'}
 📊 Health check: http://localhost:${PORT}/health
 📚 API Documentation: http://localhost:${PORT}/api-docs
-🔗 Database: Connected to MongoDB Atlas
+🏬 Multi-tenant: DB-per-tenant (control plane + per-request resolution)
 🔐 Authentication: OTP-based with JWT tokens
 🔌 WebSocket: Socket.io ready for real-time notifications
 ⚡ Ready to handle requests!

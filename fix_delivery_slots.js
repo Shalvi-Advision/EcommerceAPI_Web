@@ -1,13 +1,15 @@
+// Usage: node fix_delivery_slots.js <tenantSlug>
 require('dotenv').config();
-const { connectDB, disconnectDB, mongoose } = require('./config/database');
+const { openTenant } = require('./scripts/lib/tenantScript');
 const fs = require('fs').promises;
 const path = require('path');
 
 async function uploadDeliverySlots() {
     console.log('🚀 Uploading delivery slots...\n');
 
+    let db, close;
     try {
-        await connectDB();
+        ({ db, close } = await openTenant(process.argv[2]));
 
         const filePath = path.join(__dirname, '../Pagariya Collection/MasterRetailDB.deliveryslots.json');
         const data = await fs.readFile(filePath, 'utf8');
@@ -29,7 +31,7 @@ async function uploadDeliverySlots() {
         });
 
         // Drop the collection first to remove the unique index issue
-        const collection = mongoose.connection.db.collection('deliveryslots');
+        const collection = db.collection('deliveryslots');
         await collection.drop().catch(() => console.log('Collection does not exist, creating new one'));
 
         // Insert data
@@ -39,7 +41,7 @@ async function uploadDeliverySlots() {
     } catch (error) {
         console.error('❌ Error:', error.message);
     } finally {
-        await disconnectDB();
+        if (close) await close();
     }
 }
 
