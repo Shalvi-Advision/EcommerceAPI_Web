@@ -215,25 +215,30 @@ async function provisionTenant(body, actor = {}) {
   }
 }
 
-// Delete a tenant: drop its DB and mark the Tenant row deleted. Rollback-safe to
-// call even if the DB is already gone.
-async function deleteTenant(slug, actor = {}) {
+// Delete a tenant. SOFT by default: marks the Tenant row 'deleted' but PRESERVES
+// the tenant database, so an accidental delete is fully recoverable (just set the
+// row back to 'active'). The DB is dropped ONLY when called with { purge: true }
+// — an explicit, irreversible purge. Rollback-safe to call even if the DB is gone.
+async function deleteTenant(slug, actor = {}, opts = {}) {
   const tenant = await Tenant.findOne({ slug });
   if (!tenant) throw fail('Tenant not found', 404);
 
-  const t = getTenantDb(tenant.dbName);
-  await t.conn.asPromise();
-  await t.conn.dropDatabase().catch(() => {});
+  if (opts.purge) {
+    const t = getTenantDb(tenant.dbName);
+    await t.conn.asPromise();
+    await t.conn.dropDatabase().catch(() => {});
+  }
 
   tenant.status = 'deleted';
   await tenant.save();
 
   await controlConn.model('AuditLog').create({
     actorType: 'platformAdmin', actorId: actor.id || null, actorName: actor.name || null,
-    action: 'tenant.delete', tenantSlug: slug, meta: { dbName: tenant.dbName },
+    action: 'tenant.delete', tenantSlug: slug,
+    meta: { dbName: tenant.dbName, purged: !!opts.purge },
   }).catch(() => {});
 
-  return { slug, status: 'deleted' };
+  return { slug, status: 'deleted', purged: !!opts.purge };
 }
 
 module.exports = { provisionTenant, deleteTenant, buildIntegrations, validateInput };
