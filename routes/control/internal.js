@@ -34,4 +34,35 @@ router.get('/domain-allowed', async (req, res) => {
   return res.status(403).send('not allowed');
 });
 
+// @route   GET /api/internal/pending-domains
+// @desc    All custom domains that should have an nginx vhost + cert on the edge:
+//          registered, super-admin approved (or already live), active tenant. The
+//          VPS reconciler (sync-tenant-domains.sh, see docs/07) polls this and
+//          provisions any domain that lacks an nginx site. Loopback-only, so it
+//          needs no auth token — Caddy/cron call it over 127.0.0.1.
+// @access  Loopback only
+router.get('/pending-domains', async (req, res) => {
+  try {
+    const tenants = await Tenant.find({
+      customDomain: { $ne: null },
+      domainStatus: { $in: ['approved', 'live'] },
+      status: 'active',
+    })
+      .select('slug customDomain domainStatus')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: tenants.map((t) => ({
+        slug: t.slug,
+        customDomain: t.customDomain,
+        domainStatus: t.domainStatus,
+      })),
+    });
+  } catch (error) {
+    console.error('pending-domains error:', error);
+    res.status(500).json({ success: false, message: 'Failed to list pending domains' });
+  }
+});
+
 module.exports = router;
