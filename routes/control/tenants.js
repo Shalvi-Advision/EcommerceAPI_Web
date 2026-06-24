@@ -27,6 +27,27 @@ function visibleFilter(req) {
 const LIST_PROJECTION =
   'name slug subdomain customDomain domainStatus dbName status branding.appName branding.logoUrl goLiveChecklist createdAt updatedAt';
 
+// Detail/edit projection — includes the FULL branding sub-document (no secrets
+// live in branding) plus features. Still excludes `integrations` (the *Enc
+// secrets). Used by GET /:slug and the PATCH /:slug response.
+const DETAIL_PROJECTION =
+  'name slug subdomain customDomain domainStatus dbName status branding features goLiveChecklist createdAt updatedAt';
+
+// Branding fields a platform admin may edit. slug/subdomain/dbName are immutable
+// (isolation keys); status uses suspend/resume; customDomain uses the domain
+// routes. Everything else here is free-text branding.
+const EDITABLE_BRANDING = [
+  'appName',
+  'logoUrl',
+  'faviconUrl',
+  'primaryColor',
+  'secondaryColor',
+  'themeColor',
+  'supportEmail',
+  'supportPhone',
+  'footerText',
+];
+
 // @route   GET /api/admin/tenants
 // @desc    List tenants (no secrets)
 // @access  Platform admin
@@ -116,7 +137,7 @@ router.delete('/:slug', requirePlatformAdmin, assertTenantAllowed, async (req, r
 // @access  Platform admin
 router.get('/:slug', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
   try {
-    const tenant = await Tenant.findOne({ slug: req.params.slug }).select(LIST_PROJECTION).lean();
+    const tenant = await Tenant.findOne({ slug: req.params.slug }).select(DETAIL_PROJECTION).lean();
     if (!tenant) {
       return res.status(404).json({ success: false, message: 'Tenant not found' });
     }
@@ -124,6 +145,78 @@ router.get('/:slug', requirePlatformAdmin, assertTenantAllowed, async (req, res)
   } catch (error) {
     console.error('Get tenant error:', error);
     res.status(500).json({ success: false, message: 'Failed to get tenant', error: error.message });
+  }
+});
+
+// @route   PATCH /api/admin/tenants/:slug
+// @desc    Edit a tenant's display name and branding (no secrets, no routing/db
+//          keys). For status use suspend/resume; for customDomain use the domain
+//          routes.
+// @access  Platform admin
+router.patch('/:slug', requirePlatformAdmin, assertTenantAllowed, async (req, res) => {
+  try {
+    const tenant = await Tenant.findOne({ slug: req.params.slug });
+    if (!tenant) {
+      return res.status(404).json({ success: false, message: 'Tenant not found' });
+    }
+    if (tenant.status === 'deleted') {
+      return res.status(409).json({ success: false, message: 'Tenant is deleted' });
+    }
+
+    const changed = {};
+
+    if (req.body.name !== undefined) {
+      const name = String(req.body.name).trim();
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Name cannot be empty' });
+      }
+      tenant.name = name;
+      changed.name = name;
+    }
+
+    const branding = req.body.branding;
+    if (branding && typeof branding === 'object') {
+      tenant.branding = tenant.branding || {};
+      for (const key of EDITABLE_BRANDING) {
+        if (branding[key] === undefined) continue;
+        const value = String(branding[key]).trim();
+        // hex-color sanity check for the color fields
+        if (
+          ['primaryColor', 'secondaryColor', 'themeColor'].includes(key) &&
+          value &&
+          !/^#?[0-9a-fA-F]{6}$/.test(value)
+        ) {
+          return res.status(400).json({ success: false, message: `Invalid hex color for ${key}` });
+        }
+        tenant.branding[key] = value || undefined;
+        changed[`branding.${key}`] = tenant.branding[key];
+      }
+    }
+
+    if (Object.keys(changed).length === 0) {
+      return res.status(400).json({ success: false, message: 'No editable fields provided' });
+    }
+
+    await tenant.save();
+    // Branding feeds the public tenant config; clear the resolve cache so changes
+    // surface promptly.
+    resolveTenant.invalidate();
+
+    await AuditLog.create({
+      actorType: 'platformAdmin',
+      actorId: req.platformAdmin._id,
+      actorName: req.platformAdmin.name,
+      action: 'tenant.update',
+      tenantSlug: tenant.slug,
+      meta: { changed: Object.keys(changed) },
+      ip: req.ip,
+    }).catch(() => {});
+
+    const updated = await Tenant.findOne({ slug: tenant.slug }).select(DETAIL_PROJECTION).lean();
+    res.status(200).json({ success: true, message: 'Tenant updated', data: updated });
+  } catch (error) {
+    console.error('Update tenant error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update tenant', error: error.message });
   }
 });
 
