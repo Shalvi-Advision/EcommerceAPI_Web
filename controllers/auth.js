@@ -2,6 +2,24 @@ const jwt = require('jsonwebtoken');
 const sms = require('../utils/sms');
 const { smsConfigFor } = require('../integrations/sms');
 
+// Dev convenience: when a tenant has no SMS gateway configured, allow OTP login
+// to proceed without a real send so the 2786 backdoor can be used for testing.
+// NEVER enabled in production (keeps the per-tenant-required gate intact there).
+// Set OTP_DEV_FALLBACK=off to force strict gating even in dev.
+const OTP_DEV_FALLBACK =
+  process.env.NODE_ENV !== 'production' && process.env.OTP_DEV_FALLBACK !== 'off';
+
+// Resolve the tenant SMS config, or null when it's unconfigured AND the dev
+// fallback is active. Re-throws the 422 otherwise (production / fallback off).
+function smsConfigOrDevNull(tenant) {
+  try {
+    return smsConfigFor(tenant);
+  } catch (err) {
+    if (OTP_DEV_FALLBACK && err.status === 422) return null;
+    throw err;
+  }
+}
+
 // Generate JWT token. Binds the issuing tenant's slug into the token so it
 // cannot be replayed against another tenant (enforced in middleware/auth.js).
 const generateToken = (userId, tenantSlug) => {
@@ -43,10 +61,15 @@ const sendOtp = async (req, res) => {
     const { User } = req.models;
     await User.findOrCreateByMobile(mobile);
 
-    // Send valid OTP via the tenant's SMS Gateway (422 if not configured)
-    const smsCfg = smsConfigFor(req.tenant);
-    const smsResponse = await sms.sendOtp(smsCfg, mobile);
-    console.log(`SMS OTP Sent to ${mobile}:`, smsResponse);
+    // Send valid OTP via the tenant's SMS Gateway. In dev, an unconfigured tenant
+    // skips the real send (smsCfg === null) and you log in with the 2786 backdoor.
+    const smsCfg = smsConfigOrDevNull(req.tenant);
+    if (smsCfg) {
+      const smsResponse = await sms.sendOtp(smsCfg, mobile);
+      console.log(`SMS OTP Sent to ${mobile}:`, smsResponse);
+    } else {
+      console.warn(`[dev] SMS not configured for tenant '${req.tenant?.slug}'; skipping real send. Use OTP ${process.env.SMS_DEFAULT_OTP || '2786'}.`);
+    }
 
     // Send success response
     res.status(200).json({
@@ -100,9 +123,12 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Verify OTP via SMS Gateway Provider
-    const smsCfg = smsConfigFor(req.tenant);
-    const isValid = await sms.verifyOtp(smsCfg, mobile, otp);
+    // Verify OTP via SMS Gateway Provider. In dev, an unconfigured tenant
+    // (smsCfg === null) accepts ONLY the backdoor OTP (SMS_DEFAULT_OTP / 2786).
+    const smsCfg = smsConfigOrDevNull(req.tenant);
+    const isValid = smsCfg
+      ? await sms.verifyOtp(smsCfg, mobile, otp)
+      : otp === (process.env.SMS_DEFAULT_OTP || '2786');
 
     if (!isValid) {
       return res.status(400).json({
